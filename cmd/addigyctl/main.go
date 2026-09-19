@@ -24,6 +24,7 @@ type Globals struct {
 	ConfigFile string `name:"config-file" env:"ADDIGYCTL_CONFIG" help:"Path to the config file (default: <user config dir>/addigyctl/config.json)."`
 	Output     string `name:"output" short:"o" placeholder:"FORMAT" help:"Output format: table (default), json or csv."`
 	JSON       bool   `name:"json" short:"j" help:"Print raw JSON instead of a table (same as --output json)."`
+	Borders    *bool  `name:"borders" negatable:"" help:"Draw table output with borders (default: off, or the config file's \"borders\" key)."`
 	Debug      bool   `name:"debug" help:"Log HTTP requests to stderr."`
 }
 
@@ -52,6 +53,7 @@ type CLI struct {
 	Devices  DevicesCmd  `cmd:"" help:"Query devices."`
 	Policies PoliciesCmd `cmd:"" help:"Query policies."`
 	Facts    FactsCmd    `cmd:"" help:"Discover the fact identifiers available for devices."`
+	Ade      AdeCmd      `cmd:"" help:"Query Automated Device Enrollment (ADE) tokens."`
 	Config   ConfigCmd   `cmd:"" help:"Manage the config file."`
 }
 

@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies and facts.
+A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts and ADE tokens.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -44,6 +44,8 @@ Settings are resolved in this order: command-line flags, environment variables, 
 | Organization | `--org-id`        | `ADDIGY_ORG_ID`      | `org_id`        |
 | Config file  | `--config-file`   | `ADDIGYCTL_CONFIG`   | n/a             |
 | Device columns | `--fact` (on `devices list`) | n/a   | `device_facts`  |
+| Timezone     | n/a               | n/a                   | `timezone`      |
+| Table borders | `--borders` / `--no-borders` | n/a  | `borders`       |
 
 The config file is `config.json` in the user config directory: `~/Library/Application Support/addigyctl/config.json` on macOS, `$XDG_CONFIG_HOME/addigyctl/config.json` (or `~/.config/addigyctl/config.json`) on Linux. Create a template with:
 
@@ -58,11 +60,13 @@ addigyctl config show     # effective configuration, API key redacted
   "api_key": "…",
   "base_url": "https://api.addigy.com/api/v2",
   "org_id": "",
-  "device_facts": ["serial_number", "device_name", "os_version"]
+  "device_facts": ["serial_number", "device_name", "os_version"],
+  "timezone": "CET",
+  "borders": false
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to `CET`. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -70,6 +74,7 @@ addigyctl config show     # effective configuration, API key redacted
 addigyctl devices  list | get | policies
 addigyctl policies list | tree | get
 addigyctl facts    list
+addigyctl ade      tokens
 addigyctl config   path | init | show
 ```
 
@@ -85,6 +90,7 @@ addigyctl policies list --parent Acme        # direct sub-policies (ID or name)
 addigyctl policies list --all                # every level, flat
 addigyctl policies list --name laptop        # name contains text, any level
 addigyctl policies list --id <id> --id <id>  # specific policies
+addigyctl policies list --sort devices --desc  # busiest policies first
 addigyctl policies tree                      # the whole hierarchy
 addigyctl policies tree Acme --depth 1 --ids # one branch, with IDs
 addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
@@ -92,7 +98,7 @@ addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
 
 Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a name is ambiguous, the error lists the candidates with their IDs and paths.
 
-The `DEVICES` column (and the `[n]` in the tree) counts the devices in a policy and all of its sub-policies, which is the same set `devices list --policy` returns. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it.
+The `DEVICES` column (and the `[n]` in the tree) counts the devices in a policy and all of its sub-policies, which is the same set `devices list --policy` returns. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`.
 
 ### Devices
 
@@ -117,7 +123,20 @@ Device columns are facts. To see which identifiers your tenant has:
 ```sh
 addigyctl facts list
 addigyctl facts list battery
+addigyctl facts list --sort source
 ```
+
+`--sort` accepts `identifier` (default), `name`, `type` or `source`.
+
+### ADE tokens
+
+```sh
+addigyctl ade tokens                            # every ADE token
+addigyctl ade tokens --policy-id <id> --policy-id <id>  # only these policies
+addigyctl ade tokens --sort expiry              # tokens closest to expiring first
+```
+
+`TOKEN EXPIRY` and `LAST SCAN` are shown as dates (no time) in the configured `timezone` (default CET). `--json` prints the full token, including the time and `orgid`/`syncing_error`. `--sort` accepts `policy` (default, by full path), `expiry`, `scan`, `disabled` or `synced`.
 
 ## Output formats
 
@@ -138,6 +157,23 @@ addigyctl devices list -j | jq '.items[].agentid'
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 
+### Table borders
+
+Tables are whitespace-separated by default. Add `--borders` for a bordered grid, or set `"borders": true` in the config file to make it the default (`--no-borders` always overrides that back off):
+
+```sh
+addigyctl policies list --borders
+```
+
+```
+┌───────────┬────────────┬─────────┬──────────┐
+│ POLICY ID │ NAME       │ DEVICES │ CHILDREN │
+├───────────┼────────────┼─────────┼──────────┤
+│ acme      │ Acme       │ 5       │ 2        │
+│ other     │ Other Root │ 1       │ 0        │
+└───────────┴────────────┴─────────┴──────────┘
+```
+
 ## Regenerating the client
 
 ```sh
@@ -146,7 +182,7 @@ make generate    # Swagger 2.0 -> OpenAPI 3, then oapi-codegen
 make build
 ```
 
-The Addigy spec has more than 300 operations; only the ones in `oapi-codegen.yaml` are generated (`GetDevices`, `GetPolicies`, `GetDevicePolicyAssignments`, `GetAvailableFacts`). To use another endpoint:
+The Addigy spec has more than 300 operations; only the ones in `oapi-codegen.yaml` are generated (`GetDevices`, `GetPolicies`, `GetDevicePolicyAssignments`, `GetAvailableFacts`, `GetAdeTokens`). To use another endpoint:
 
 1. Find its `operationId` in `api/godoc_swagger.json`.
 2. Add it to `include-operation-ids` in `oapi-codegen.yaml`.
@@ -158,7 +194,7 @@ The wrapper in `internal/addigy` only decodes the fields the CLI needs and keeps
 ## Project layout
 
 ```
-cmd/addigyctl/           Kong commands (devices, policies, facts, config)
+cmd/addigyctl/           Kong commands (devices, policies, facts, ade, config)
 internal/addigy/         thin wrapper over the generated client
 internal/addigy/gen/     generated client and models (do not edit)
 internal/config/         config file handling

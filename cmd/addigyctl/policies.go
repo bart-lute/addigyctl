@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -26,6 +27,8 @@ type PoliciesListCmd struct {
 	IDs      []string `name:"id" help:"Only these policy IDs (comma-separated or repeated); searches all levels."`
 	Name     string   `help:"Only policies whose name contains this text (case-insensitive); searches all levels unless --parent is set."`
 	NoCounts bool     `name:"no-counts" help:"Skip the DEVICES column (saves fetching every device)."`
+	Sort     string   `help:"Column to sort by: name (default), id, devices, children or parent."`
+	Desc     bool     `help:"Sort descending."`
 }
 
 func (c *PoliciesListCmd) Run(app *App) error {
@@ -90,6 +93,10 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		}
 	}
 
+	if err := sortPolicyRows(shown, idx, devices, c.Sort, c.Desc); err != nil {
+		return err
+	}
+
 	if app.json() {
 		raws := make([]json.RawMessage, len(shown))
 		for i, p := range shown {
@@ -129,7 +136,7 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		}
 		rows = append(rows, row)
 	}
-	if err := output.Rows(app.Out, app.Format(), headers, rows); err != nil {
+	if err := output.Rows(app.Out, app.Format(), headers, rows, app.borders()); err != nil {
 		return err
 	}
 	app.footer("%s%s", count(len(shown), one, many), suffix)
@@ -248,6 +255,51 @@ func policyNames(pols []addigy.Policy) map[string]string {
 		m[p.ID] = p.Name
 	}
 	return m
+}
+
+// sortPolicyRows sorts shown by the requested column. The empty column
+// defaults to "name". "devices" needs device counts (drop --no-counts).
+func sortPolicyRows(shown []addigy.Policy, idx *policyIndex, devices map[string]int, col string, desc bool) error {
+	col = strings.ToLower(col)
+	if col == "" {
+		col = "name"
+	}
+	switch col {
+	case "id", "name", "children", "parent":
+	case "devices":
+		if devices == nil {
+			return errors.New("--sort devices needs device counts; drop --no-counts")
+		}
+	default:
+		return fmt.Errorf("unknown --sort column %q (use one of: id, name, devices, children, parent)", col)
+	}
+	sort.SliceStable(shown, func(i, j int) bool {
+		a, b := shown[i], shown[j]
+		var c int
+		switch col {
+		case "id":
+			c = cmpString(a.ID, b.ID)
+		case "name":
+			c = cmpString(a.Name, b.Name)
+		case "devices":
+			c = cmpInt(devices[a.ID], devices[b.ID])
+		case "children":
+			c = cmpInt(len(idx.children[a.ID]), len(idx.children[b.ID]))
+		case "parent":
+			c = cmpString(idx.parentName(a), idx.parentName(b))
+		}
+		if c == 0 {
+			c = cmpString(a.Name, b.Name)
+		}
+		if c == 0 {
+			c = cmpString(a.ID, b.ID)
+		}
+		if desc {
+			return c > 0
+		}
+		return c < 0
+	})
+	return nil
 }
 
 // count formats "1 policy" / "2 policies".

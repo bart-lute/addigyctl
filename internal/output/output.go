@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"unicode/utf8"
 )
 
 // Format is an output format.
@@ -34,12 +35,12 @@ func ParseFormat(s string) (Format, error) {
 }
 
 // Rows writes tabular data as a table or as CSV. (JSON is not tabular; callers
-// handle it themselves.)
-func Rows(w io.Writer, f Format, headers []string, rows [][]string) error {
+// handle it themselves.) borders is ignored for CSV.
+func Rows(w io.Writer, f Format, headers []string, rows [][]string, borders bool) error {
 	if f == FormatCSV {
 		return CSV(w, headers, rows)
 	}
-	return Table(w, headers, rows)
+	return Table(w, headers, rows, borders)
 }
 
 // CSV writes a header row followed by the rows as RFC 4180 CSV. Cells are
@@ -64,8 +65,12 @@ func JSON(w io.Writer, v any) error {
 	return enc.Encode(v)
 }
 
-// Table writes an aligned, whitespace-separated table.
-func Table(w io.Writer, headers []string, rows [][]string) error {
+// Table writes a table: whitespace-separated by default, or a bordered grid
+// when borders is true.
+func Table(w io.Writer, headers []string, rows [][]string, borders bool) error {
+	if borders {
+		return borderedTable(w, headers, rows)
+	}
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, joinCells(headers))
 	for _, r := range rows {
@@ -74,11 +79,60 @@ func Table(w io.Writer, headers []string, rows [][]string) error {
 	return tw.Flush()
 }
 
+// borderedTable writes headers and rows as a grid drawn with Unicode
+// box-drawing characters, columns sized to their widest cell.
+func borderedTable(w io.Writer, headers []string, rows [][]string) error {
+	cols := len(headers)
+	widths := make([]int, cols)
+	for i, h := range headers {
+		widths[i] = utf8.RuneCountInString(cleanCell(h))
+	}
+	for _, r := range rows {
+		for i := 0; i < cols && i < len(r); i++ {
+			if n := utf8.RuneCountInString(cleanCell(r[i])); n > widths[i] {
+				widths[i] = n
+			}
+		}
+	}
+
+	rule := func(left, mid, right string) string {
+		segs := make([]string, cols)
+		for i, wd := range widths {
+			segs[i] = strings.Repeat("─", wd+2)
+		}
+		return left + strings.Join(segs, mid) + right
+	}
+	writeRow := func(cells []string) {
+		fmt.Fprint(w, "│")
+		for i := 0; i < cols; i++ {
+			var c string
+			if i < len(cells) {
+				c = cleanCell(cells[i])
+			}
+			fmt.Fprintf(w, " %s%s │", c, strings.Repeat(" ", widths[i]-utf8.RuneCountInString(c)))
+		}
+		fmt.Fprintln(w)
+	}
+
+	fmt.Fprintln(w, rule("┌", "┬", "┐"))
+	writeRow(headers)
+	fmt.Fprintln(w, rule("├", "┼", "┤"))
+	for _, r := range rows {
+		writeRow(r)
+	}
+	fmt.Fprintln(w, rule("└", "┴", "┘"))
+	return nil
+}
+
+// cleanCell replaces characters that would break a single-line cell.
+func cleanCell(s string) string {
+	return strings.NewReplacer("\t", " ", "\r", " ", "\n", " ").Replace(s)
+}
+
 func joinCells(cells []string) string {
 	clean := make([]string, len(cells))
 	for i, c := range cells {
-		c = strings.NewReplacer("\t", " ", "\r", " ", "\n", " ").Replace(c)
-		clean[i] = c
+		clean[i] = cleanCell(c)
 	}
 	return strings.Join(clean, "\t")
 }

@@ -332,6 +332,34 @@ func TestPoliciesGetByNameAndID(t *testing.T) {
 	}
 }
 
+func TestPoliciesListBorders(t *testing.T) {
+	plain := runPolicies(t, false, (&PoliciesListCmd{}).Run)
+	if strings.Contains(plain, "┌") {
+		t.Errorf("borders should be off by default:\n%s", plain)
+	}
+
+	on := true
+	r := runPoliciesWith(t, Globals{Borders: &on}, (&PoliciesListCmd{}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if !strings.Contains(r.out, "┌") || !strings.Contains(r.out, "│ NAME") {
+		t.Errorf("--borders should draw a bordered table:\n%s", r.out)
+	}
+
+	off := false
+	r = runPoliciesWith(t, Globals{Borders: &off}, func(app *App) error {
+		app.Cfg.Borders = true // --no-borders must override the config default
+		return (&PoliciesListCmd{}).Run(app)
+	})
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if strings.Contains(r.out, "┌") {
+		t.Errorf("--no-borders should override a config default of true:\n%s", r.out)
+	}
+}
+
 func lineContaining(t *testing.T, s, sub string) string {
 	t.Helper()
 	for _, l := range strings.Split(s, "\n") {

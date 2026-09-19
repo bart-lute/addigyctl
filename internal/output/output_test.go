@@ -41,11 +41,23 @@ func TestTruncate(t *testing.T) {
 
 func TestTable(t *testing.T) {
 	var buf bytes.Buffer
-	err := Table(&buf, []string{"ID", "NAME"}, [][]string{{"1", "alpha\nbeta"}, {"22", "x"}})
+	err := Table(&buf, []string{"ID", "NAME"}, [][]string{{"1", "alpha\nbeta"}, {"22", "x"}}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := "ID  NAME\n1   alpha beta\n22  x\n"
+	if buf.String() != want {
+		t.Errorf("got:\n%q\nwant:\n%q", buf.String(), want)
+	}
+}
+
+func TestTableBordered(t *testing.T) {
+	var buf bytes.Buffer
+	err := Table(&buf, []string{"ID", "NAME"}, [][]string{{"1", "alpha\nbeta"}, {"22", "x"}}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "┌────┬────────────┐\n│ ID │ NAME       │\n├────┼────────────┤\n│ 1  │ alpha beta │\n│ 22 │ x          │\n└────┴────────────┘\n"
 	if buf.String() != want {
 		t.Errorf("got:\n%q\nwant:\n%q", buf.String(), want)
 	}
@@ -96,10 +108,10 @@ func TestRowsPicksTheFormat(t *testing.T) {
 	headers, rows := []string{"A", "B"}, [][]string{{"1", "x y"}}
 
 	var tbl, csvOut bytes.Buffer
-	if err := Rows(&tbl, FormatTable, headers, rows); err != nil {
+	if err := Rows(&tbl, FormatTable, headers, rows, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := Rows(&csvOut, FormatCSV, headers, rows); err != nil {
+	if err := Rows(&csvOut, FormatCSV, headers, rows, false); err != nil {
 		t.Fatal(err)
 	}
 	if tbl.String() != "A  B\n1  x y\n" {

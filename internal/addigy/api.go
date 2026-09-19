@@ -313,3 +313,39 @@ func (a *API) AvailableFacts(ctx context.Context, orgID string) ([]FactDef, erro
 	}
 	return facts, nil
 }
+
+// ---- ADE tokens -------------------------------------------------------------
+
+// AdeToken is the projection of an Automated Device Enrollment (ADE) token
+// the CLI displays.
+type AdeToken struct {
+	PolicyID             string `json:"policy_id"`
+	OrgID                string `json:"orgid"`
+	AccessTokenExpiry    string `json:"access_token_expiry"`
+	LastScanTime         string `json:"last_scan_time"`
+	Disabled             bool   `json:"disabled"`
+	Removed              bool   `json:"removed"`
+	DevicesSyncCompleted bool   `json:"devices_sync_completed"`
+	SyncingError         string `json:"syncing_error"`
+}
+
+// AdeTokens lists the ADE tokens assigned to policies
+// (POST /oa/ade/tokens/policies/query). With no ids it returns every token.
+func (a *API) AdeTokens(ctx context.Context, policyIDs []string) ([]AdeToken, error) {
+	req := gen.AdeAutomaticEnrollmentRequest{}
+	if len(policyIDs) > 0 {
+		req.PolicyIds = &policyIDs
+	}
+	resp, err := a.c.GetAdeTokensWithResponse(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var tokens []AdeToken
+	if err := json.Unmarshal(resp.Body, &tokens); err != nil {
+		return nil, fmt.Errorf("decoding ade tokens: %w", err)
+	}
+	return tokens, nil
+}

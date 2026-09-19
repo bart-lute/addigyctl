@@ -27,12 +27,20 @@ type File struct {
 	BaseURL     string   `json:"base_url,omitempty"`
 	OrgID       string   `json:"org_id,omitempty"`
 	DeviceFacts []string `json:"device_facts,omitempty"`
+	// Timezone is an IANA location name (or "CET"/"UTC") used to render
+	// dates, such as ADE token timestamps. Defaults to "CET".
+	Timezone string `json:"timezone,omitempty"`
+	// Borders draws table output as a bordered grid instead of
+	// whitespace-separated columns. Defaults to false; overridden by
+	// --borders/--no-borders.
+	Borders bool `json:"borders,omitempty"`
 }
 
 // Template is what `addigyctl config init` writes.
 var Template = File{
 	BaseURL:     "https://api.addigy.com/api/v2",
 	DeviceFacts: []string{"serial_number", "device_name", "os_version"},
+	Timezone:    "CET",
 }
 
 // Dir returns the directory holding addigyctl's config, using

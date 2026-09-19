@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/config"
@@ -26,6 +27,7 @@ type App struct {
 
 	api   *addigy.API
 	orgID string
+	loc   *time.Location
 }
 
 // newApp merges the config file into the globals. Precedence: flags and env
@@ -78,6 +80,15 @@ func (a *App) Format() output.Format {
 
 func (a *App) csv() bool  { return a.Format() == output.FormatCSV }
 func (a *App) json() bool { return a.Format() == output.FormatJSON }
+
+// borders reports whether tables should be drawn with borders: --borders /
+// --no-borders when given, else the config file's "borders" key.
+func (a *App) borders() bool {
+	if a.G.Borders != nil {
+		return *a.G.Borders
+	}
+	return a.Cfg.Borders
+}
 
 // footer prints a summary line below a table. CSV output stays pure data.
 func (a *App) footer(format string, args ...any) {
@@ -147,6 +158,24 @@ func (a *App) OrgID() (string, error) {
 		}
 	}
 	return "", errors.New("could not determine the organization ID; set ADDIGY_ORG_ID or \"org_id\" in the config file")
+}
+
+// Location returns the time zone used to render dates (ADE token timestamps,
+// for example), from the config file's "timezone" key. Defaults to CET.
+func (a *App) Location() (*time.Location, error) {
+	if a.loc != nil {
+		return a.loc, nil
+	}
+	tz := a.Cfg.Timezone
+	if tz == "" {
+		tz = "CET"
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		return nil, fmt.Errorf("invalid \"timezone\" %q in config: %w", tz, err)
+	}
+	a.loc = loc
+	return loc, nil
 }
 
 func expandHome(p string) string {

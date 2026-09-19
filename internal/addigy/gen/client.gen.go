@@ -70,6 +70,36 @@ type PolicyQueryRequest struct {
 	Policies *[]string `json:"policies,omitempty"`
 }
 
+// AdeAutomaticEnrollmentRequest defines model for ade.AutomaticEnrollmentRequest.
+type AdeAutomaticEnrollmentRequest struct {
+	PolicyIds *[]string `json:"policy_ids,omitempty"`
+}
+
+// AdeServiceAdeAccount defines model for ade_service.AdeAccount.
+type AdeServiceAdeAccount struct {
+	AdminId    *string   `json:"admin_id,omitempty"`
+	OrgAddress *string   `json:"org_address,omitempty"`
+	OrgEmail   *string   `json:"org_email,omitempty"`
+	OrgName    *string   `json:"org_name,omitempty"`
+	OrgPhone   *string   `json:"org_phone,omitempty"`
+	ServerName *string   `json:"server_name,omitempty"`
+	ServerUuid *string   `json:"server_uuid,omitempty"`
+	Urls       *[]string `json:"urls,omitempty"`
+}
+
+// AdeServiceAdeToken defines model for ade_service.AdeToken.
+type AdeServiceAdeToken struct {
+	AccessTokenExpiry    *string               `json:"access_token_expiry,omitempty"`
+	Account              *AdeServiceAdeAccount `json:"account,omitempty"`
+	DevicesSyncCompleted *bool                 `json:"devices_sync_completed,omitempty"`
+	Disabled             *bool                 `json:"disabled,omitempty"`
+	LastScanTime         *string               `json:"last_scan_time,omitempty"`
+	Orgid                *string               `json:"orgid,omitempty"`
+	PolicyId             *string               `json:"policy_id,omitempty"`
+	Removed              *bool                 `json:"removed,omitempty"`
+	SyncingError         *string               `json:"syncing_error,omitempty"`
+}
+
 // AuditorServiceFact defines model for auditor_service.Fact.
 type AuditorServiceFact struct {
 	CommunityFactId  *string                        `json:"community_fact_id,omitempty"`
@@ -482,6 +512,9 @@ type ResponseEntitiesMetadata struct {
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
 type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
 
+// GetAdeTokensJSONRequestBody defines body for GetAdeTokens for application/json ContentType.
+type GetAdeTokensJSONRequestBody = AdeAutomaticEnrollmentRequest
+
 // GetPoliciesJSONRequestBody defines body for GetPolicies for application/json ContentType.
 type GetPoliciesJSONRequestBody = PolicyQueryRequest
 
@@ -592,6 +625,20 @@ type ClientInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetAdeTokensWithBody Get a list of ade tokens assigned to policies.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+	GetAdeTokensWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAdeTokens Get a list of ade tokens assigned to policies.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+	GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPoliciesWithBody Get Policy Info
 	//
 	// Query an organization for all policies or filter to get specific policy info.
@@ -674,6 +721,40 @@ func (c *Client) GetDevicePolicyAssignments(ctx context.Context, organizationId 
 // Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAvailableFactsRequest(c.Server, organizationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetAdeTokensWithBody Get a list of ade tokens assigned to policies.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+func (c *Client) GetAdeTokensWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAdeTokensRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetAdeTokens Get a list of ade tokens assigned to policies.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+func (c *Client) GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAdeTokensRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -837,6 +918,46 @@ func NewGetAvailableFactsRequest(server string, organizationId string) (*http.Re
 	return req, nil
 }
 
+// NewGetAdeTokensRequest calls the generic GetAdeTokens builder with application/json body
+func NewGetAdeTokensRequest(server string, body GetAdeTokensJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetAdeTokensRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetAdeTokensRequestWithBody constructs an http.Request for the GetAdeTokens method, with any body, and a specified content type
+func NewGetAdeTokensRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/ade/tokens/policies/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetPoliciesRequest calls the generic GetPolicies builder with application/json body
 func NewGetPoliciesRequest(server string, body GetPoliciesJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -957,6 +1078,20 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFactsWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetAvailableFactsResponse, error)
+
+	// GetAdeTokensWithBodyWithResponse Get a list of ade tokens assigned to policies.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+	GetAdeTokensWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error)
+
+	// GetAdeTokensWithResponse Get a list of ade tokens assigned to policies.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+	GetAdeTokensWithResponse(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error)
 
 	// GetPoliciesWithBodyWithResponse Get Policy Info
 	//
@@ -1128,6 +1263,54 @@ func (r GetAvailableFactsResponse) ContentType() string {
 	return ""
 }
 
+type GetAdeTokensResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]AdeServiceAdeToken
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetAdeTokensResponse) GetJSON200() *[]AdeServiceAdeToken {
+	return r.JSON200
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetAdeTokensResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetAdeTokensResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAdeTokensResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAdeTokensResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetAdeTokensResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetPoliciesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1235,6 +1418,32 @@ func (c *ClientWithResponses) GetAvailableFactsWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseGetAvailableFactsResponse(rsp)
+}
+
+// GetAdeTokensWithBodyWithResponse Get a list of ade tokens assigned to policies.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+func (c *ClientWithResponses) GetAdeTokensWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error) {
+	rsp, err := c.GetAdeTokensWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAdeTokensResponse(rsp)
+}
+
+// GetAdeTokensWithResponse Get a list of ade tokens assigned to policies.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
+func (c *ClientWithResponses) GetAdeTokensWithResponse(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error) {
+	rsp, err := c.GetAdeTokens(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAdeTokensResponse(rsp)
 }
 
 // GetPoliciesWithBodyWithResponse Get Policy Info
@@ -1356,6 +1565,39 @@ func ParseGetAvailableFactsResponse(rsp *http.Response) (*GetAvailableFactsRespo
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest []AuditorServiceFact
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetAdeTokensResponse parses an HTTP response from a GetAdeTokensWithResponse call
+func ParseGetAdeTokensResponse(rsp *http.Response) (*GetAdeTokensResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAdeTokensResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []AdeServiceAdeToken
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

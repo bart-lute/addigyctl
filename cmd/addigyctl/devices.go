@@ -90,7 +90,7 @@ func (c *DevicesListCmd) Run(app *App) error {
 		}
 		rows = append(rows, row)
 	}
-	if err := output.Rows(app.Out, app.Format(), headers, rows); err != nil {
+	if err := output.Rows(app.Out, app.Format(), headers, rows, app.borders()); err != nil {
 		return err
 	}
 	total := meta.Total
@@ -259,7 +259,7 @@ func (c *DevicesGetCmd) Run(app *App) error {
 		}
 		rows = append(rows, []string{n, f.Type, value})
 	}
-	return output.Rows(app.Out, app.Format(), []string{"FACT", "TYPE", "VALUE"}, rows)
+	return output.Rows(app.Out, app.Format(), []string{"FACT", "TYPE", "VALUE"}, rows, app.borders())
 }
 
 // policyHint explains the mistake of passing a policy to a device command. It
@@ -373,7 +373,7 @@ func (c *DevicesPoliciesCmd) Run(app *App) error {
 	for _, id := range ids {
 		rows = append(rows, []string{id, app.cell(names[id])})
 	}
-	return output.Rows(app.Out, app.Format(), []string{"POLICY ID", "NAME"}, rows)
+	return output.Rows(app.Out, app.Format(), []string{"POLICY ID", "NAME"}, rows, app.borders())
 }
 
 func firstNonEmpty(lists ...[]string) []string {

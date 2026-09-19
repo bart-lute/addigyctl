@@ -18,3 +18,4 @@ output-options:
     - GetPolicies
     - GetDevicePolicyAssignments
     - GetAvailableFacts
+    - GetAdeTokens
