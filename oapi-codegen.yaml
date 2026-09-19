@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+#
+# Generates the typed Addigy API client (and models) from api/openapi3.json,
+# which `make convert` derives from the Swagger 2.0 document Addigy publishes.
+#
+# The Addigy spec has 300+ operations; we only generate the ones the CLI uses.
+# To add functionality: add the operationId below (look them up in
+# api/godoc_swagger.json), run `make generate`, then call the new
+# *WithResponse method from internal/addigy/api.go.
+package: gen
+output: internal/addigy/gen/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  include-operation-ids:
+    - GetDevices
+    - GetPolicies
+    - GetDevicePolicyAssignments
+    - GetAvailableFacts
