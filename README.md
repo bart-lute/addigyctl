@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts and ADE tokens.
+A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts, ADE tokens and alerts.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -77,6 +77,7 @@ addigyctl devices  list | get | policies
 addigyctl policies list | tree | get
 addigyctl facts    list
 addigyctl ade      tokens
+addigyctl alerts   list
 addigyctl config   path | init | show
 ```
 
@@ -139,6 +140,20 @@ addigyctl ade tokens --sort expiry              # tokens closest to expiring fir
 ```
 
 `TOKEN EXPIRY` and `LAST SCAN` are shown in the configured `timezone` and `date_format` (see [Configuration](#configuration); default: the machine's local time zone and date notation). `--json` prints the full token, including `orgid`/`syncing_error`. `--sort` accepts `policy` (default, by full path), `expiry`, `scan`, `disabled` or `synced`.
+
+### Alerts
+
+```sh
+addigyctl alerts list                            # unattended and acknowledged alerts (not yet resolved)
+addigyctl alerts list --resolved                 # only resolved alerts
+addigyctl alerts list --all                      # every status
+addigyctl alerts list --muted                    # only muted alerts (any status)
+addigyctl alerts list --category Security        # only this category
+addigyctl alerts list --name-contains disk       # name contains text
+addigyctl alerts list --sort created --desc      # newest first
+```
+
+Alerts are Addigy's *received* alerts (triggered instances), not alert policy definitions. Status filters use Addigy's own status names directly rather than the web GUI's tab labels, which don't line up 1:1 with them (its "Open" tab, for instance, shows the same alerts as "Unattended"): `--unattended`, `--acknowledged` and `--resolved` are combinable, defaulting to unattended + acknowledged (i.e. not yet resolved) when none are given; `--all` shows every status. `--muted` is a separate flag, since an alert's muted state is independent of its status; Addigy has no server-side filter for it, so addigyctl fetches every page matching the status filter and filters locally, which can be slow combined with `--all`. `SERIAL NUMBER` and `DEVICE NAME` are resolved from each alert's agent ID via one bulk device fetch; an alert whose device no longer exists shows `-`. `--sort` accepts `created` (default, oldest first), `name`, `level`, `status` or `category`.
 
 ## Output formats
 

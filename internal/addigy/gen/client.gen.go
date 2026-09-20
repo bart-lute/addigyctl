@@ -16,6 +16,45 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for AlertEntitiesFilterRemediationStatus.
+const (
+	Done    AlertEntitiesFilterRemediationStatus = "Done"
+	Failed  AlertEntitiesFilterRemediationStatus = "Failed"
+	Pending AlertEntitiesFilterRemediationStatus = "Pending"
+)
+
+// Valid indicates whether the value is a known member of the AlertEntitiesFilterRemediationStatus enum.
+func (e AlertEntitiesFilterRemediationStatus) Valid() bool {
+	switch e {
+	case Done:
+		return true
+	case Failed:
+		return true
+	case Pending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection.
+const (
+	Asc  AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "asc"
+	Desc AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection enum.
+func (e AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection) Valid() bool {
+	switch e {
+	case Asc:
+		return true
+	case Desc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PolicyServicePrebuiltAppSettingsPromptIntervalHours.
 const (
 	N4 PolicyServicePrebuiltAppSettingsPromptIntervalHours = 4
@@ -99,6 +138,46 @@ type AdeServiceAdeToken struct {
 	Removed              *bool                 `json:"removed,omitempty"`
 	SyncingError         *string               `json:"syncing_error,omitempty"`
 }
+
+// AlertEntitiesFilter defines model for alert_entities.Filter.
+type AlertEntitiesFilter struct {
+	AgentIds *[]string `json:"agent_ids,omitempty"`
+	Category *string   `json:"category,omitempty"`
+
+	// EndDate Example: 2023-12-31
+	EndDate *string   `json:"end_date,omitempty"`
+	Ids     *[]string `json:"ids,omitempty"`
+
+	// NameContains Example: disk
+	NameContains *string `json:"name_contains,omitempty"`
+
+	// RemediationStatus Example: Pending
+	RemediationStatus *AlertEntitiesFilterRemediationStatus `json:"remediation_status,omitempty"`
+
+	// StartDate Example: 2023-12-31
+	StartDate *string   `json:"start_date,omitempty"`
+	Statuses  *[]string `json:"statuses,omitempty"`
+}
+
+// AlertEntitiesFilterRemediationStatus Example: Pending
+type AlertEntitiesFilterRemediationStatus string
+
+// AlertEntitiesPaginatedReceivedAlertsRequestQuery defines model for alert_entities.PaginatedReceivedAlertsRequestQuery.
+type AlertEntitiesPaginatedReceivedAlertsRequestQuery struct {
+	// Page Example: 1
+	Page *int `json:"page,omitempty"`
+
+	// PerPage Example: 10
+	PerPage       *int                                                           `json:"per_page,omitempty"`
+	Query         *AlertEntitiesFilter                                           `json:"query,omitempty"`
+	SortDirection *AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection `json:"sort_direction,omitempty"`
+
+	// SortField Example: name
+	SortField *string `json:"sort_field,omitempty"`
+}
+
+// AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection defines model for AlertEntitiesPaginatedReceivedAlertsRequestQuery.SortDirection.
+type AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection string
 
 // AuditorServiceFact defines model for auditor_service.Fact.
 type AuditorServiceFact struct {
@@ -509,11 +588,20 @@ type ResponseEntitiesMetadata struct {
 	Total *int `json:"total,omitempty"`
 }
 
+// ResponseEntitiesResponse defines model for response_entities.Response.
+type ResponseEntitiesResponse struct {
+	Items    interface{}               `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata `json:"metadata,omitempty"`
+}
+
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
 type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
 
 // GetAdeTokensJSONRequestBody defines body for GetAdeTokens for application/json ContentType.
 type GetAdeTokensJSONRequestBody = AdeAutomaticEnrollmentRequest
+
+// GetReceivedAlertsByFilterJSONRequestBody defines body for GetReceivedAlertsByFilter for application/json ContentType.
+type GetReceivedAlertsByFilterJSONRequestBody = AlertEntitiesPaginatedReceivedAlertsRequestQuery
 
 // GetPoliciesJSONRequestBody defines body for GetPolicies for application/json ContentType.
 type GetPoliciesJSONRequestBody = PolicyQueryRequest
@@ -639,6 +727,24 @@ type ClientInterface interface {
 	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 	GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetReceivedAlertsByFilterWithBody Get received alerts matching a filter.
+	//
+	// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+	GetReceivedAlertsByFilterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetReceivedAlertsByFilter Get received alerts matching a filter.
+	//
+	// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+	GetReceivedAlertsByFilter(ctx context.Context, body GetReceivedAlertsByFilterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPoliciesWithBody Get Policy Info
 	//
 	// Query an organization for all policies or filter to get specific policy info.
@@ -755,6 +861,44 @@ func (c *Client) GetAdeTokensWithBody(ctx context.Context, contentType string, b
 // Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 func (c *Client) GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAdeTokensRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetReceivedAlertsByFilterWithBody Get received alerts matching a filter.
+//
+// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+func (c *Client) GetReceivedAlertsByFilterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetReceivedAlertsByFilterRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetReceivedAlertsByFilter Get received alerts matching a filter.
+//
+// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+func (c *Client) GetReceivedAlertsByFilter(ctx context.Context, body GetReceivedAlertsByFilterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetReceivedAlertsByFilterRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -958,6 +1102,46 @@ func NewGetAdeTokensRequestWithBody(server string, contentType string, body io.R
 	return req, nil
 }
 
+// NewGetReceivedAlertsByFilterRequest calls the generic GetReceivedAlertsByFilter builder with application/json body
+func NewGetReceivedAlertsByFilterRequest(server string, body GetReceivedAlertsByFilterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetReceivedAlertsByFilterRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetReceivedAlertsByFilterRequestWithBody constructs an http.Request for the GetReceivedAlertsByFilter method, with any body, and a specified content type
+func NewGetReceivedAlertsByFilterRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/monitoring/alerts/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetPoliciesRequest calls the generic GetPolicies builder with application/json body
 func NewGetPoliciesRequest(server string, body GetPoliciesJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -1092,6 +1276,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 	GetAdeTokensWithResponse(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error)
+
+	// GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
+	//
+	// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+	GetReceivedAlertsByFilterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetReceivedAlertsByFilterResponse, error)
+
+	// GetReceivedAlertsByFilterWithResponse Get received alerts matching a filter.
+	//
+	// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+	GetReceivedAlertsByFilterWithResponse(ctx context.Context, body GetReceivedAlertsByFilterJSONRequestBody, reqEditors ...RequestEditorFn) (*GetReceivedAlertsByFilterResponse, error)
 
 	// GetPoliciesWithBodyWithResponse Get Policy Info
 	//
@@ -1311,6 +1513,61 @@ func (r GetAdeTokensResponse) ContentType() string {
 	return ""
 }
 
+type GetReceivedAlertsByFilterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetReceivedAlertsByFilterResponse) GetJSON200() *ResponseEntitiesResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetReceivedAlertsByFilterResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetReceivedAlertsByFilterResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetReceivedAlertsByFilterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetReceivedAlertsByFilterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetReceivedAlertsByFilterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetReceivedAlertsByFilterResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetPoliciesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1444,6 +1701,36 @@ func (c *ClientWithResponses) GetAdeTokensWithResponse(ctx context.Context, body
 		return nil, err
 	}
 	return ParseGetAdeTokensResponse(rsp)
+}
+
+// GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
+//
+// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+func (c *ClientWithResponses) GetReceivedAlertsByFilterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetReceivedAlertsByFilterResponse, error) {
+	rsp, err := c.GetReceivedAlertsByFilterWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetReceivedAlertsByFilterResponse(rsp)
+}
+
+// GetReceivedAlertsByFilterWithResponse Get received alerts matching a filter.
+//
+// Get a paginated list of received alerts matching a filter (agents, statuses, category, remediation status, name, date range).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/monitoring/alerts/query (the `GetReceivedAlertsByFilter` operationId).
+func (c *ClientWithResponses) GetReceivedAlertsByFilterWithResponse(ctx context.Context, body GetReceivedAlertsByFilterJSONRequestBody, reqEditors ...RequestEditorFn) (*GetReceivedAlertsByFilterResponse, error) {
+	rsp, err := c.GetReceivedAlertsByFilter(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetReceivedAlertsByFilterResponse(rsp)
 }
 
 // GetPoliciesWithBodyWithResponse Get Policy Info
@@ -1602,6 +1889,46 @@ func ParseGetAdeTokensResponse(rsp *http.Response) (*GetAdeTokensResponse, error
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetReceivedAlertsByFilterResponse parses an HTTP response from a GetReceivedAlertsByFilterWithResponse call
+func ParseGetReceivedAlertsByFilterResponse(rsp *http.Response) (*GetReceivedAlertsByFilterResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetReceivedAlertsByFilterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse

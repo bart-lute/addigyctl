@@ -54,6 +54,7 @@ type CLI struct {
 	Policies PoliciesCmd `cmd:"" help:"Query policies."`
 	Facts    FactsCmd    `cmd:"" help:"Discover the fact identifiers available for devices."`
 	Ade      AdeCmd      `cmd:"" help:"Query Automated Device Enrollment (ADE) tokens."`
+	Alerts   AlertsCmd   `cmd:"" help:"Query received alerts."`
 	Config   ConfigCmd   `cmd:"" help:"Manage the config file."`
 }
 

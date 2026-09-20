@@ -119,6 +119,52 @@ func TestAvailableFacts(t *testing.T) {
 	}
 }
 
+func TestSearchAlerts(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/oa/monitoring/alerts/query" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		var body map[string]any
+		if err := json.Unmarshal(b, &body); err != nil {
+			t.Fatal(err)
+		}
+		if body["page"] != float64(1) || body["per_page"] != float64(20) {
+			t.Errorf("unexpected paging: %s", b)
+		}
+		// AlertQuery.Desc=true should send the API's "asc", the inverted
+		// direction that actually returns the newest/highest first.
+		if body["sort_field"] != "created_date" || body["sort_direction"] != "asc" {
+			t.Errorf("unexpected sort: %s", b)
+		}
+		q, _ := body["query"].(map[string]any)
+		statuses, _ := q["statuses"].([]any)
+		if len(statuses) != 1 || statuses[0] != "Unattended" {
+			t.Errorf("unexpected query: %s", b)
+		}
+		// ticket_id has been observed as a number on old alerts, not just a
+		// string or null; Alert.TicketID must tolerate that.
+		io.WriteString(w, `{"items":[{"id":"a1","name":"Disk full","status":"Unattended","agent_id":"dev1","muted":true,"ticket_id":42}],
+			"metadata":{"page":1,"page_count":1,"per_page":20,"result_count":1,"total":1}}`)
+	})
+
+	page, err := api.SearchAlerts(context.Background(), AlertQuery{
+		Statuses: []string{"Unattended"}, SortField: "created_date", Desc: true, Page: 1, PerPage: 20,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "a1" || !page.Items[0].Muted {
+		t.Fatalf("unexpected items: %+v", page.Items)
+	}
+	if v, ok := page.Items[0].TicketID.(float64); !ok || v != 42 {
+		t.Errorf("ticket_id = %#v, want float64(42)", page.Items[0].TicketID)
+	}
+	if page.Metadata.Total != 1 {
+		t.Errorf("metadata = %+v", page.Metadata)
+	}
+}
+
 func TestErrorMapping(t *testing.T) {
 	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)

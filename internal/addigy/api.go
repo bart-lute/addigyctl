@@ -349,3 +349,106 @@ func (a *API) AdeTokens(ctx context.Context, policyIDs []string) ([]AdeToken, er
 	}
 	return tokens, nil
 }
+
+// ---- Alerts -----------------------------------------------------------------
+
+// Alert is a received alert (a triggered instance of an alert policy), as
+// the CLI displays it.
+type Alert struct {
+	ID                string   `json:"id"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"` // "Unattended", "Acknowledged" or "Resolved"
+	AgentID           string   `json:"agent_id"`
+	Level             string   `json:"level"`
+	Category          string   `json:"category"`
+	FactIdentifier    string   `json:"fact_identifier"`
+	Value             any      `json:"value"`
+	ValueType         string   `json:"value_type"`
+	Selector          string   `json:"selector"`
+	Emails            []string `json:"emails"`
+	RemediationStatus string   `json:"remediation_status"`
+	CreatedDate       string   `json:"created_date"`
+	AckDate           string   `json:"ack_date"`
+	ResolvedDate      string   `json:"resolved_date"`
+	ResolvedUserEmail string   `json:"resolved_user_email"`
+	Muted             bool     `json:"muted"`
+	MutedForDays      int      `json:"muted_for_days"`
+	TicketID          any      `json:"ticket_id"` // usually a string or null, but seen as a number on old alerts
+}
+
+// AlertPage is one page of received-alerts results.
+type AlertPage struct {
+	Items    []Alert
+	Metadata PageMetadata
+}
+
+// AlertQuery selects, sorts and paginates the received alerts SearchAlerts
+// returns. Statuses is any of "Unattended", "Acknowledged" or "Resolved"; a
+// nil/empty Statuses matches every status. There is no server-side way to
+// filter by the Muted flag; callers needing that must filter client-side.
+type AlertQuery struct {
+	Statuses      []string
+	Category      string
+	NameContains  string
+	SortField     string // e.g. "created_date", "name", "level", "status", "category"
+	Desc          bool
+	Page, PerPage int
+}
+
+func (q AlertQuery) body() gen.AlertEntitiesPaginatedReceivedAlertsRequestQuery {
+	// sort_field and sort_direction look optional in Addigy's spec but the
+	// endpoint 400s without them, so always send a default.
+	sortField := q.SortField
+	if sortField == "" {
+		sortField = "created_date"
+	}
+	// Addigy's sort_direction for this endpoint is inverted from its label
+	// ("asc" returns the newest/highest first, "desc" the oldest/lowest),
+	// verified against a live tenant. Flip it here so AlertQuery.Desc means
+	// what callers expect: ascending (oldest first) by default, descending
+	// (newest first) with Desc.
+	dir := gen.Desc
+	if q.Desc {
+		dir = gen.Asc
+	}
+	b := gen.AlertEntitiesPaginatedReceivedAlertsRequestQuery{
+		Page:          &q.Page,
+		PerPage:       &q.PerPage,
+		SortField:     &sortField,
+		SortDirection: &dir,
+	}
+	if len(q.Statuses) > 0 || q.Category != "" || q.NameContains != "" {
+		f := gen.AlertEntitiesFilter{}
+		if len(q.Statuses) > 0 {
+			f.Statuses = &q.Statuses
+		}
+		if q.Category != "" {
+			f.Category = &q.Category
+		}
+		if q.NameContains != "" {
+			f.NameContains = &q.NameContains
+		}
+		b.Query = &f
+	}
+	return b
+}
+
+// SearchAlerts runs a filtered, sorted, paginated received-alerts query
+// (POST /oa/monitoring/alerts/query).
+func (a *API) SearchAlerts(ctx context.Context, q AlertQuery) (*AlertPage, error) {
+	resp, err := a.c.GetReceivedAlertsByFilterWithResponse(ctx, q.body())
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var raw struct {
+		Items    []Alert      `json:"items"`
+		Metadata PageMetadata `json:"metadata"`
+	}
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, fmt.Errorf("decoding alerts: %w", err)
+	}
+	return &AlertPage{Items: raw.Items, Metadata: raw.Metadata}, nil
+}
