@@ -34,8 +34,8 @@ type AlertsListCmd struct {
 	KnownDevices bool   `name:"known-devices" help:"Only alerts for a device that still exists (matches the web GUI, which hides alerts for removed devices). Addigy keeps alert history for devices long after they're gone, e.g. \"Missing for 30 days\" alerts that outlive the device itself."`
 	Category     string `help:"Only alerts in this category."`
 	NameContains string `name:"name-contains" help:"Only alerts whose name contains this text."`
-	Sort         string `help:"Column to sort by: created (default, oldest first), name, level, status or category."`
-	Desc         bool   `help:"Sort descending."`
+	Sort         string `help:"Column to sort by: created (default, newest first), name, level, status or category (all ascending)."`
+	Desc         bool   `help:"Reverse the column's default order (oldest first for created; descending for the others)."`
 	Page         int    `default:"1" help:"Page number."`
 	PerPage      int    `name:"per-page" default:"50" help:"Alerts per page."`
 }
@@ -72,6 +72,13 @@ var alertSortFields = map[string]string{
 	"category": "category",
 }
 
+// alertSortNewestFirst marks the columns whose intuitive default is
+// descending (newest/highest first) rather than ascending (A-Z). Only
+// "created" qualifies today. --desc reverses whichever default the chosen
+// column has, rather than always meaning "ascending", so it does the same
+// thing intuitively regardless of --sort.
+var alertSortNewestFirst = map[string]bool{"created": true}
+
 func (c *AlertsListCmd) Run(app *App) error {
 	col := strings.ToLower(c.Sort)
 	if col == "" {
@@ -81,6 +88,7 @@ func (c *AlertsListCmd) Run(app *App) error {
 	if !ok {
 		return fmt.Errorf("unknown --sort column %q (use one of: created, name, level, status, category)", col)
 	}
+	desc := alertSortNewestFirst[col] != c.Desc
 
 	api, err := app.API()
 	if err != nil {
@@ -92,7 +100,7 @@ func (c *AlertsListCmd) Run(app *App) error {
 		Category:     c.Category,
 		NameContains: c.NameContains,
 		SortField:    sortField,
-		Desc:         c.Desc,
+		Desc:         desc,
 		Page:         c.Page,
 		PerPage:      c.PerPage,
 	}

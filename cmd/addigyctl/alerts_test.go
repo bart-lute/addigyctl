@@ -154,8 +154,8 @@ func TestAlertsListDefaultStatusesAndSort(t *testing.T) {
 		t.Fatalf("expected 1 request, got %d", len(as.requests))
 	}
 	req := as.requests[0]
-	if req.sortField != "created_date" || req.sortDirection != "desc" {
-		t.Errorf("default sort = %+v, want created_date/desc (ascending, oldest first)", req)
+	if req.sortField != "created_date" || req.sortDirection != "asc" {
+		t.Errorf("default sort = %+v, want created_date/asc (the inverted, newest-first direction)", req)
 	}
 	got := map[string]bool{}
 	for _, s := range req.statuses {
@@ -191,14 +191,33 @@ func TestAlertsListAllStatusesSendsNoFilter(t *testing.T) {
 	}
 }
 
-func TestAlertsListDescInvertsAPIDirection(t *testing.T) {
+// TestAlertsListDescReversesCreatedsDefault checks that --desc, on the
+// default "created" column (whose own default is newest first), reverses to
+// oldest first rather than doubling down on newest-first.
+func TestAlertsListDescReversesCreatedsDefault(t *testing.T) {
 	as := newAlertsServer(t)
 	res := as.run(t, &AlertsListCmd{Desc: true, PerPage: 50})
 	if res.err != nil {
 		t.Fatal(res.err)
 	}
+	if got := as.requests[len(as.requests)-1].sortDirection; got != "desc" {
+		t.Errorf("--desc on created should send API sort_direction=desc (oldest first), got %q", got)
+	}
+}
+
+// TestAlertsListDescOnNameSortsDescending checks that --desc on a column
+// whose own default is ascending (unlike created) behaves conventionally:
+// it sorts descending.
+func TestAlertsListDescOnNameSortsDescending(t *testing.T) {
+	as := newAlertsServer(t)
+	res := as.run(t, &AlertsListCmd{Sort: "name", Desc: true, PerPage: 50})
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	// Addigy's sort_direction is inverted from its label for this endpoint
+	// (verified in TestSearchAlerts), so descending is sent as "asc".
 	if got := as.requests[len(as.requests)-1].sortDirection; got != "asc" {
-		t.Errorf("--desc should send API sort_direction=asc (the inverted, newest-first direction), got %q", got)
+		t.Errorf("--sort name --desc should send API sort_direction=asc, got %q", got)
 	}
 }
 
