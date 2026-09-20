@@ -72,6 +72,11 @@ func (c *DevicesListCmd) Run(app *App) error {
 		}{raws, meta})
 	}
 
+	style, err := app.DateStyle()
+	if err != nil {
+		return err
+	}
+
 	headers := []string{"AGENT ID"}
 	for _, f := range facts {
 		headers = append(headers, strings.ToUpper(strings.ReplaceAll(f, "_", " ")))
@@ -83,7 +88,7 @@ func (c *DevicesListCmd) Run(app *App) error {
 	for _, d := range devices {
 		row := []string{d.AgentID}
 		for _, f := range facts {
-			row = append(row, factCell(d, f, app.csv()))
+			row = append(row, factCell(d, f, app.csv(), style))
 		}
 		if locate != nil {
 			row = append(row, locate(d))
@@ -190,14 +195,15 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 }
 
 // factCell renders one fact of a device. Tables show "-" for missing facts and
-// shorten long values; CSV fields are left empty and never shortened.
-func factCell(d addigy.Device, id string, csv bool) string {
+// shorten long values; CSV fields are left empty and never shortened. A
+// "datetime" fact is rendered using style.
+func factCell(d addigy.Device, id string, csv bool, style output.DateStyle) string {
 	f, ok := d.Facts[id]
 	if csv {
 		if !ok {
 			return ""
 		}
-		return output.Field(f.Value)
+		return output.Field(factValueDisplay(f, style))
 	}
 	if !ok {
 		return "-"
@@ -205,7 +211,18 @@ func factCell(d addigy.Device, id string, csv bool) string {
 	if f.Value == nil && f.ErrorMsg != "" {
 		return "(error)"
 	}
-	return output.Truncate(output.Value(f.Value), 60)
+	return output.Truncate(output.Value(factValueDisplay(f, style)), 60)
+}
+
+// factValueDisplay returns a fact's value, formatting a "datetime" fact using
+// style.
+func factValueDisplay(f addigy.Fact, style output.DateStyle) any {
+	if f.Type == "datetime" {
+		if s, ok := f.Value.(string); ok {
+			return style.DateTime(s)
+		}
+	}
+	return f.Value
 }
 
 // ---- devices get -----------------------------------------------------------
@@ -239,10 +256,15 @@ func (c *DevicesGetCmd) Run(app *App) error {
 		return output.JSON(app.Out, dev.Raw)
 	}
 
+	style, err := app.DateStyle()
+	if err != nil {
+		return err
+	}
+
 	if !app.csv() {
 		fmt.Fprintf(app.Out, "Agent ID:    %s\n", dev.AgentID)
 		fmt.Fprintf(app.Out, "Org ID:      %s\n", output.Value(dev.OrgID))
-		fmt.Fprintf(app.Out, "Audit date:  %s\n\n", output.Value(dev.AuditDate))
+		fmt.Fprintf(app.Out, "Audit date:  %s\n\n", output.Value(style.DateTime(dev.AuditDate)))
 	}
 
 	names := make([]string, 0, len(dev.Facts))
@@ -253,9 +275,9 @@ func (c *DevicesGetCmd) Run(app *App) error {
 	rows := make([][]string, 0, len(names))
 	for _, n := range names {
 		f := dev.Facts[n]
-		value := output.Field(f.Value)
+		value := output.Field(factValueDisplay(f, style))
 		if !app.csv() {
-			value = output.Truncate(output.Value(f.Value), 100)
+			value = output.Truncate(output.Value(factValueDisplay(f, style)), 100)
 		}
 		rows = append(rows, []string{n, f.Type, value})
 	}

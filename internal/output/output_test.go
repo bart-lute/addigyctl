@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 func TestValue(t *testing.T) {
@@ -119,6 +120,34 @@ func TestRowsPicksTheFormat(t *testing.T) {
 	}
 	if csvOut.String() != "A,B\n1,x y\n" {
 		t.Errorf("csv = %q", csvOut.String())
+	}
+}
+
+func TestTranslateDatePattern(t *testing.T) {
+	cases := map[string]string{
+		"dd-mm-yyyy hh:mm:ss": "02-01-2006 15:04:05",
+		"yyyy-mm-dd hh:mm:ss": "2006-01-02 15:04:05",
+		"mm-dd-yyyy hh:mm:ss": "01-02-2006 15:04:05",
+		"mm/dd/yyyy":          "01/02/2006",
+		"yyyy-mm-dd":          "2006-01-02",
+	}
+	for in, want := range cases {
+		if got := TranslateDatePattern(in); got != want {
+			t.Errorf("TranslateDatePattern(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestDateStyleDateTime(t *testing.T) {
+	s := DateStyle{Loc: time.UTC, Layout: "2006-01-02 15:04:05"}
+	if got := s.DateTime("2027-08-25T11:27:49Z"); got != "2027-08-25 11:27:49" {
+		t.Errorf("got %q", got)
+	}
+	if got := s.DateTime(""); got != "" {
+		t.Errorf("empty input should render empty, got %q", got)
+	}
+	if got := s.DateTime("not a date"); got != "not a date" {
+		t.Errorf("unparseable input should be returned unchanged, got %q", got)
 	}
 }
 

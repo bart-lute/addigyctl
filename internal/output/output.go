@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 	"unicode/utf8"
 )
 
@@ -165,6 +167,71 @@ func Field(v any) string {
 		}
 		return string(b)
 	}
+}
+
+// dateTimeLayouts are the timestamp layouts Addigy's API has been observed to
+// use, tried in order.
+var dateTimeLayouts = []string{
+	time.RFC3339Nano,
+	time.RFC3339,
+	"2006-01-02T15:04:05",
+	"2006-01-02 15:04:05",
+}
+
+// ParseTime parses a timestamp in any of dateTimeLayouts. It returns the zero
+// time for an empty or unrecognized value.
+func ParseTime(s string) time.Time {
+	for _, layout := range dateTimeLayouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
+// DateStyle bundles the time zone and layout used to render a timestamp for
+// display.
+type DateStyle struct {
+	Loc    *time.Location
+	Layout string // a Go reference-time layout, e.g. from TranslateDatePattern
+}
+
+// DateTime renders a timestamp using s. A value that matches none of the
+// known layouts is returned unchanged.
+func (s DateStyle) DateTime(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if t := ParseTime(raw); !t.IsZero() {
+		return t.In(s.Loc).Format(s.Layout)
+	}
+	return raw
+}
+
+// mmRe matches an "mm" token immediately next to a colon, i.e. used as
+// minutes rather than month.
+var mmRe = regexp.MustCompile(`:mm|mm:`)
+
+// TranslateDatePattern turns a friendly date pattern such as
+// "dd-mm-yyyy hh:mm:ss" or "yyyy-mm-dd" into a Go reference-time layout.
+// Recognized tokens: yyyy, dd, hh (24-hour), ss, and mm, which means minutes
+// when it sits next to a ":" and month otherwise (as in "hh:mm:ss" vs.
+// "dd-mm-yyyy"). Anything else in the pattern (separators, spaces) is passed
+// through unchanged.
+func TranslateDatePattern(pattern string) string {
+	p := strings.NewReplacer(
+		"yyyy", "2006",
+		"dd", "02",
+		"hh", "15",
+		"ss", "05",
+	).Replace(pattern)
+	p = mmRe.ReplaceAllStringFunc(p, func(m string) string {
+		if strings.HasPrefix(m, ":") {
+			return ":04"
+		}
+		return "04:"
+	})
+	return strings.ReplaceAll(p, "mm", "01")
 }
 
 // Truncate shortens s to at most max runes, ending with an ellipsis.

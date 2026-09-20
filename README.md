@@ -45,6 +45,7 @@ Settings are resolved in this order: command-line flags, environment variables, 
 | Config file  | `--config-file`   | `ADDIGYCTL_CONFIG`   | n/a             |
 | Device columns | `--fact` (on `devices list`) | n/a   | `device_facts`  |
 | Timezone     | n/a               | n/a                   | `timezone`      |
+| Date format  | n/a               | n/a                   | `date_format`   |
 | Table borders | `--borders` / `--no-borders` | n/a  | `borders`       |
 
 The config file is `config.json` in the user config directory: `~/Library/Application Support/addigyctl/config.json` on macOS, `$XDG_CONFIG_HOME/addigyctl/config.json` (or `~/.config/addigyctl/config.json`) on Linux. Create a template with:
@@ -61,12 +62,13 @@ addigyctl config show     # effective configuration, API key redacted
   "base_url": "https://api.addigy.com/api/v2",
   "org_id": "",
   "device_facts": ["serial_number", "device_name", "os_version"],
-  "timezone": "CET",
+  "timezone": "Europe/Amsterdam",
+  "date_format": "dd-mm-yyyy hh:mm:ss",
   "borders": false
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to `CET`. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -136,7 +138,7 @@ addigyctl ade tokens --policy-id <id> --policy-id <id>  # only these policies
 addigyctl ade tokens --sort expiry              # tokens closest to expiring first
 ```
 
-`TOKEN EXPIRY` and `LAST SCAN` are shown as dates (no time) in the configured `timezone` (default CET). `--json` prints the full token, including the time and `orgid`/`syncing_error`. `--sort` accepts `policy` (default, by full path), `expiry`, `scan`, `disabled` or `synced`.
+`TOKEN EXPIRY` and `LAST SCAN` are shown in the configured `timezone` and `date_format` (see [Configuration](#configuration); default: the machine's local time zone and date notation). `--json` prints the full token, including `orgid`/`syncing_error`. `--sort` accepts `policy` (default, by full path), `expiry`, `scan`, `disabled` or `synced`.
 
 ## Output formats
 

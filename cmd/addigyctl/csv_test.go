@@ -6,9 +6,13 @@ import (
 	"encoding/csv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
+	"github.com/ginkio/addigyctl/internal/output"
 )
+
+var testDateStyle = output.DateStyle{Loc: time.UTC, Layout: "02-01-2006 15:04:05"}
 
 func TestGlobalsFormat(t *testing.T) {
 	cases := []struct {
@@ -112,17 +116,17 @@ func TestFactCellCSVKeepsLongValuesAndLeavesMissingEmpty(t *testing.T) {
 		"n":    {Value: 42.0},
 	}}
 	for id, want := range map[string]string{"long": long, "bad": "", "missing": "", "n": "42"} {
-		if got := factCell(d, id, true); got != want {
+		if got := factCell(d, id, true, testDateStyle); got != want {
 			t.Errorf("csv %s = %q, want %q", id, got, want)
 		}
 	}
-	if got := factCell(d, "long", false); len([]rune(got)) != 60 {
+	if got := factCell(d, "long", false, testDateStyle); len([]rune(got)) != 60 {
 		t.Errorf("table cells stay shortened, got %d runes", len([]rune(got)))
 	}
-	if got := factCell(d, "missing", false); got != "-" {
+	if got := factCell(d, "missing", false, testDateStyle); got != "-" {
 		t.Errorf("table placeholder = %q", got)
 	}
-	if got := factCell(d, "bad", false); got != "(error)" {
+	if got := factCell(d, "bad", false, testDateStyle); got != "(error)" {
 		t.Errorf("table error cell = %q", got)
 	}
 }

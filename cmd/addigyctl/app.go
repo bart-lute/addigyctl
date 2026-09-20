@@ -25,9 +25,10 @@ type App struct {
 	Out     io.Writer
 	Err     io.Writer
 
-	api   *addigy.API
-	orgID string
-	loc   *time.Location
+	api        *addigy.API
+	orgID      string
+	loc        *time.Location
+	dateLayout string
 }
 
 // newApp merges the config file into the globals. Precedence: flags and env
@@ -161,14 +162,16 @@ func (a *App) OrgID() (string, error) {
 }
 
 // Location returns the time zone used to render dates (ADE token timestamps,
-// for example), from the config file's "timezone" key. Defaults to CET.
+// for example), from the config file's "timezone" key. Defaults to the
+// machine's local time zone.
 func (a *App) Location() (*time.Location, error) {
 	if a.loc != nil {
 		return a.loc, nil
 	}
 	tz := a.Cfg.Timezone
 	if tz == "" {
-		tz = "CET"
+		a.loc = time.Local
+		return a.loc, nil
 	}
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
@@ -176,6 +179,30 @@ func (a *App) Location() (*time.Location, error) {
 	}
 	a.loc = loc
 	return loc, nil
+}
+
+// DateLayout returns the Go time layout used to render dates: translated
+// from the config file's "date_format" key when set, else derived from the
+// machine's current locale (see defaultDatePattern).
+func (a *App) DateLayout() string {
+	if a.dateLayout == "" {
+		pattern := a.Cfg.DateFormat
+		if pattern == "" {
+			pattern = defaultDatePattern()
+		}
+		a.dateLayout = output.TranslateDatePattern(pattern)
+	}
+	return a.dateLayout
+}
+
+// DateStyle returns the time zone and layout used to render dates, bundled
+// for passing to output.DateStyle.DateTime.
+func (a *App) DateStyle() (output.DateStyle, error) {
+	loc, err := a.Location()
+	if err != nil {
+		return output.DateStyle{}, err
+	}
+	return output.DateStyle{Loc: loc, Layout: a.DateLayout()}, nil
 }
 
 func expandHome(p string) string {

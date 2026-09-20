@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
@@ -63,7 +62,7 @@ func (c *AdeTokensCmd) Run(app *App) error {
 		return output.JSON(app.Out, sorted)
 	}
 
-	loc, err := app.Location()
+	style, err := app.DateStyle()
 	if err != nil {
 		return err
 	}
@@ -72,8 +71,8 @@ func (c *AdeTokensCmd) Run(app *App) error {
 	for _, r := range rows {
 		tableRows = append(tableRows, []string{
 			r.path,
-			app.cell(adeDate(r.token.AccessTokenExpiry, loc)),
-			app.cell(adeDate(r.token.LastScanTime, loc)),
+			app.cell(style.DateTime(r.token.AccessTokenExpiry)),
+			app.cell(style.DateTime(r.token.LastScanTime)),
 			app.cell(r.token.Disabled),
 			app.cell(r.token.DevicesSyncCompleted),
 		})
@@ -104,9 +103,9 @@ func sortAdeRows(rows []adeRow, col string, desc bool) error {
 		case "policy":
 			c = cmpString(a.path, b.path)
 		case "expiry":
-			c = cmpTime(adeParseTime(a.token.AccessTokenExpiry), adeParseTime(b.token.AccessTokenExpiry))
+			c = cmpTime(output.ParseTime(a.token.AccessTokenExpiry), output.ParseTime(b.token.AccessTokenExpiry))
 		case "scan":
-			c = cmpTime(adeParseTime(a.token.LastScanTime), adeParseTime(b.token.LastScanTime))
+			c = cmpTime(output.ParseTime(a.token.LastScanTime), output.ParseTime(b.token.LastScanTime))
 		case "disabled":
 			c = cmpBool(a.token.Disabled, b.token.Disabled)
 		case "synced":
@@ -121,36 +120,4 @@ func sortAdeRows(rows []adeRow, col string, desc bool) error {
 		return c < 0
 	})
 	return nil
-}
-
-// adeDateLayouts are the timestamp layouts Addigy's ADE endpoint has been
-// observed to use, tried in order.
-var adeDateLayouts = []string{
-	time.RFC3339Nano,
-	time.RFC3339,
-	"2006-01-02T15:04:05",
-	"2006-01-02 15:04:05",
-}
-
-// adeParseTime parses an ADE token timestamp. It returns the zero time for
-// an empty or unrecognized value.
-func adeParseTime(s string) time.Time {
-	for _, layout := range adeDateLayouts {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
-}
-
-// adeDate renders just the date of an ADE token timestamp, in loc. A value
-// that matches none of the known layouts is shown unchanged.
-func adeDate(s string, loc *time.Location) string {
-	if s == "" {
-		return ""
-	}
-	if t := adeParseTime(s); !t.IsZero() {
-		return t.In(loc).Format("2006-01-02")
-	}
-	return s
 }
