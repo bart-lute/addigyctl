@@ -148,12 +148,13 @@ addigyctl alerts list                            # unattended and acknowledged a
 addigyctl alerts list --resolved                 # only resolved alerts
 addigyctl alerts list --all                      # every status
 addigyctl alerts list --muted                    # only muted alerts (any status)
+addigyctl alerts list --known-devices            # only alerts for devices that still exist (matches the web GUI)
 addigyctl alerts list --category Security        # only this category
 addigyctl alerts list --name-contains disk       # name contains text
 addigyctl alerts list --sort created --desc      # newest first
 ```
 
-Alerts are Addigy's *received* alerts (triggered instances), not alert policy definitions. Status filters use Addigy's own status names directly rather than the web GUI's tab labels, which don't line up 1:1 with them (its "Open" tab, for instance, shows the same alerts as "Unattended"): `--unattended`, `--acknowledged` and `--resolved` are combinable, defaulting to unattended + acknowledged (i.e. not yet resolved) when none are given; `--all` shows every status. `--muted` is a separate flag, since an alert's muted state is independent of its status; Addigy has no server-side filter for it, so addigyctl fetches every page matching the status filter and filters locally, which can be slow combined with `--all`. `SERIAL NUMBER` and `DEVICE NAME` are resolved from each alert's agent ID via one bulk device fetch; an alert whose device no longer exists shows `-`. `--sort` accepts `created` (default, oldest first), `name`, `level`, `status` or `category`.
+Alerts are Addigy's *received* alerts (triggered instances), not alert policy definitions. Status filters use Addigy's own status names directly rather than the web GUI's tab labels, which don't line up 1:1 with them (its "Open" tab, for instance, shows the same alerts as "Unattended"): `--unattended`, `--acknowledged` and `--resolved` are combinable, defaulting to unattended + acknowledged (i.e. not yet resolved) when none are given; `--all` shows every status. `--muted` and `--known-devices` are separate flags with no server-side equivalent, so either forces addigyctl to fetch every page matching the status filter and filter locally, which can be slow combined with `--all`. `SERIAL NUMBER` and `DEVICE NAME` are resolved from each alert's agent ID via one bulk device fetch; an alert whose device no longer exists shows `-` unless `--known-devices` filters it out. That gap is real and can be large: Addigy keeps alert history long after a device is gone (e.g. a "Missing for 30 days" alert that outlives the device itself), which the web GUI silently hides by only showing alerts for devices still in the fleet — `--known-devices` reproduces that view. `--sort` accepts `created` (default, oldest first), `name`, `level`, `status` or `category`.
 
 ## Output formats
 

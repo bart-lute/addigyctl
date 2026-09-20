@@ -30,7 +30,8 @@ type AlertsListCmd struct {
 	Acknowledged bool   `help:"Only acknowledged alerts."`
 	Resolved     bool   `help:"Only resolved alerts."`
 	All          bool   `help:"Every status (default: unattended and acknowledged, i.e. not yet resolved)."`
-	Muted        bool   `help:"Only muted alerts. Addigy has no server-side filter for this: it fetches every page matching the status filter and filters locally, which can be slow combined with --all."`
+	Muted        bool   `help:"Only muted alerts. Addigy has no server-side filter for this or --known-devices, so either forces fetching every page matching the status filter and filtering locally, which can be slow combined with --all."`
+	KnownDevices bool   `name:"known-devices" help:"Only alerts for a device that still exists (matches the web GUI, which hides alerts for removed devices). Addigy keeps alert history for devices long after they're gone, e.g. \"Missing for 30 days\" alerts that outlive the device itself."`
 	Category     string `help:"Only alerts in this category."`
 	NameContains string `name:"name-contains" help:"Only alerts whose name contains this text."`
 	Sort         string `help:"Column to sort by: created (default, oldest first), name, level, status or category."`
@@ -96,12 +97,23 @@ func (c *AlertsListCmd) Run(app *App) error {
 		PerPage:      c.PerPage,
 	}
 
+	// The device index is needed to filter by --known-devices, and to show
+	// SERIAL NUMBER/DEVICE NAME in every non-JSON format; skip it for plain
+	// --json, which prints alerts as Addigy returns them.
+	var devices map[string]deviceIdentity
+	if c.KnownDevices || !app.json() {
+		devices, err = alertDeviceIndex(app, api)
+		if err != nil {
+			return err
+		}
+	}
+
 	var (
 		alerts []addigy.Alert
 		meta   addigy.PageMetadata
 	)
-	if c.Muted {
-		alerts, meta, err = c.fetchMuted(app, api, q)
+	if c.Muted || c.KnownDevices {
+		alerts, meta, err = c.fetchFiltered(app, api, q, devices)
 	} else {
 		var pg *addigy.AlertPage
 		pg, err = api.SearchAlerts(app.Ctx, q)
@@ -118,10 +130,6 @@ func (c *AlertsListCmd) Run(app *App) error {
 	}
 
 	style, err := app.DateStyle()
-	if err != nil {
-		return err
-	}
-	devices, err := alertDeviceIndex(app, api)
 	if err != nil {
 		return err
 	}
@@ -148,21 +156,28 @@ func (c *AlertsListCmd) Run(app *App) error {
 	return nil
 }
 
-// fetchMuted fetches every page matching q's status/category/name filter,
-// keeps only the muted alerts (there is no server-side filter for that), and
-// paginates the result the same way the server-side path would.
-func (c *AlertsListCmd) fetchMuted(app *App, api *addigy.API, q addigy.AlertQuery) ([]addigy.Alert, addigy.PageMetadata, error) {
+// fetchFiltered fetches every page matching q's status/category/name filter,
+// applies --muted and/or --known-devices (Addigy has no server-side filter
+// for either), and paginates the result the same way the server-side path
+// would.
+func (c *AlertsListCmd) fetchFiltered(app *App, api *addigy.API, q addigy.AlertQuery, devices map[string]deviceIdentity) ([]addigy.Alert, addigy.PageMetadata, error) {
 	all, err := fetchAllAlerts(app, api, q)
 	if err != nil {
 		return nil, addigy.PageMetadata{}, err
 	}
-	muted := all[:0:0]
+	kept := all[:0:0]
 	for _, al := range all {
-		if al.Muted {
-			muted = append(muted, al)
+		if c.Muted && !al.Muted {
+			continue
 		}
+		if c.KnownDevices {
+			if _, ok := devices[al.AgentID]; !ok {
+				continue
+			}
+		}
+		kept = append(kept, al)
 	}
-	shown, meta := paginateAlerts(muted, c.Page, c.PerPage)
+	shown, meta := paginateAlerts(kept, c.Page, c.PerPage)
 	return shown, meta, nil
 }
 

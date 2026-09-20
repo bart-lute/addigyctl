@@ -219,6 +219,25 @@ func TestAlertsListMutedFiltersClientSideAcrossPages(t *testing.T) {
 	}
 }
 
+func TestAlertsListKnownDevicesFiltersOrphanedAlerts(t *testing.T) {
+	as := newAlertsServer(t)
+	res := as.run(t, &AlertsListCmd{KnownDevices: true, All: true, PerPage: 50})
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	if strings.Contains(res.out, "Old malware alert") {
+		t.Errorf("alert for a nonexistent device (dev-gone) should be filtered out:\n%s", res.out)
+	}
+	for _, name := range []string{"Disk almost full", "Battery health low", "Closed ticket"} {
+		if !strings.Contains(res.out, name) {
+			t.Errorf("expected alert for a known device to remain: %q\n%s", name, res.out)
+		}
+	}
+	if !strings.Contains(res.out, "4 of 4 alerts") {
+		t.Errorf("expected pagination metadata over the filtered set, got:\n%s", res.out)
+	}
+}
+
 func TestAlertsListUnknownSortColumn(t *testing.T) {
 	as := newAlertsServer(t)
 	res := as.run(t, &AlertsListCmd{Sort: "bogus"})
