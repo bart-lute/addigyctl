@@ -93,6 +93,23 @@ func TestPoliciesListDevicesIncludeSubPolicies(t *testing.T) {
 	}
 }
 
+// TestPoliciesListSortDevicesDefaultsToMostFirst checks that --sort devices
+// defaults to busiest-first, not alphabetical-count-ascending: devices is a
+// count, where more is usually more interesting, unlike name/id/parent.
+func TestPoliciesListSortDevicesDefaultsToMostFirst(t *testing.T) {
+	// acme=5, finance=3, fin-laptops=2 devices (including sub-policies).
+	out := runPolicies(t, false, (&PoliciesListCmd{All: true, Sort: "devices"}).Run)
+	assertOrdered(t, out, "acme", "finance", "fin-laptops")
+}
+
+// TestPoliciesListSortDevicesDescReversesToFewestFirst checks that --desc
+// reverses devices' own default (most first) to fewest first, rather than
+// always meaning "descending" on top of an ascending default.
+func TestPoliciesListSortDevicesDescReversesToFewestFirst(t *testing.T) {
+	out := runPolicies(t, false, (&PoliciesListCmd{All: true, Sort: "devices", Desc: true}).Run)
+	assertOrdered(t, out, "fin-laptops", "finance", "acme")
+}
+
 func TestPoliciesListNoCountsSkipsTheDeviceFetch(t *testing.T) {
 	r := runPoliciesWith(t, Globals{}, (&PoliciesListCmd{NoCounts: true}).Run)
 	if r.err != nil {

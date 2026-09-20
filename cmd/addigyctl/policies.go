@@ -27,8 +27,8 @@ type PoliciesListCmd struct {
 	IDs      []string `name:"id" help:"Only these policy IDs (comma-separated or repeated); searches all levels."`
 	Name     string   `help:"Only policies whose name contains this text (case-insensitive); searches all levels unless --parent is set."`
 	NoCounts bool     `name:"no-counts" help:"Skip the DEVICES column (saves fetching every device)."`
-	Sort     string   `help:"Column to sort by: name (default), id, devices, children or parent."`
-	Desc     bool     `help:"Sort descending."`
+	Sort     string   `help:"Column to sort by: name (default), id, devices, children or parent. devices/children default to most first; the rest to A-Z."`
+	Desc     bool     `help:"Reverse the column's default order (fewest first for devices/children; descending for the rest)."`
 }
 
 func (c *PoliciesListCmd) Run(app *App) error {
@@ -259,6 +259,12 @@ func policyNames(pols []addigy.Policy) map[string]string {
 
 // sortPolicyRows sorts shown by the requested column. The empty column
 // defaults to "name". "devices" needs device counts (drop --no-counts).
+// policySortMostFirst marks the columns whose intuitive default is
+// descending (most first) rather than ascending (A-Z): counts, where more is
+// usually more interesting. --desc reverses whichever default the chosen
+// column has, so it means "the other order" regardless of --sort.
+var policySortMostFirst = map[string]bool{"devices": true, "children": true}
+
 func sortPolicyRows(shown []addigy.Policy, idx *policyIndex, devices map[string]int, col string, desc bool) error {
 	col = strings.ToLower(col)
 	if col == "" {
@@ -273,6 +279,7 @@ func sortPolicyRows(shown []addigy.Policy, idx *policyIndex, devices map[string]
 	default:
 		return fmt.Errorf("unknown --sort column %q (use one of: id, name, devices, children, parent)", col)
 	}
+	desc = policySortMostFirst[col] != desc
 	sort.SliceStable(shown, func(i, j int) bool {
 		a, b := shown[i], shown[j]
 		var c int

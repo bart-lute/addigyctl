@@ -93,7 +93,7 @@ addigyctl policies list --parent Acme        # direct sub-policies (ID or name)
 addigyctl policies list --all                # every level, flat
 addigyctl policies list --name laptop        # name contains text, any level
 addigyctl policies list --id <id> --id <id>  # specific policies
-addigyctl policies list --sort devices --desc  # busiest policies first
+addigyctl policies list --sort devices       # busiest policies first
 addigyctl policies tree                      # the whole hierarchy
 addigyctl policies tree Acme --depth 1 --ids # one branch, with IDs
 addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
@@ -101,7 +101,7 @@ addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
 
 Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a name is ambiguous, the error lists the candidates with their IDs and paths.
 
-The `DEVICES` column (and the `[n]` in the tree) counts the devices in a policy and all of its sub-policies, which is the same set `devices list --policy` returns. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`.
+The `DEVICES` column (and the `[n]` in the tree) counts the devices in a policy and all of its sub-policies, which is the same set `devices list --policy` returns. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
 
 ### Devices
 
