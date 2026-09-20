@@ -20,3 +20,4 @@ output-options:
     - GetAvailableFacts
     - GetAdeTokens
     - GetReceivedAlertsByFilter
+    - GetSystemEvents

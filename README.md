@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts, ADE tokens and alerts.
+A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts, ADE tokens, alerts and system events.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -78,6 +78,7 @@ addigyctl policies list | tree | get
 addigyctl facts    list
 addigyctl ade      tokens
 addigyctl alerts   list
+addigyctl events   list
 addigyctl config   path | init | show
 ```
 
@@ -156,6 +157,19 @@ addigyctl alerts list --desc                     # oldest first, instead of the 
 ```
 
 Alerts are Addigy's *received* alerts (triggered instances), not alert policy definitions. Status filters use Addigy's own status names directly rather than the web GUI's tab labels, which don't line up 1:1 with them (its "Open" tab, for instance, shows the same alerts as "Unattended"): `--unattended`, `--acknowledged` and `--resolved` are combinable, defaulting to unattended + acknowledged (i.e. not yet resolved) when none are given; `--all` shows every status. `--muted` and `--known-devices` are separate flags with no server-side equivalent, so either forces addigyctl to fetch every page matching the status filter and filter locally, which can be slow combined with `--all`. `SERIAL NUMBER` and `DEVICE NAME` are resolved from each alert's agent ID via one bulk device fetch; an alert whose device no longer exists shows `-` unless `--known-devices` filters it out. That gap is real and can be large: Addigy keeps alert history long after a device is gone (e.g. a "Missing for 30 days" alert that outlives the device itself), which the web GUI silently hides by only showing alerts for devices still in the fleet — `--known-devices` reproduces that view. `--sort` accepts `created` (default), `name`, `level`, `status` or `category`; `created` defaults to newest first and the others to A-Z, and `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
+
+### System events
+
+```sh
+addigyctl events list                            # last 24 hours, newest first
+addigyctl events list --since 7d                 # last 7 days
+addigyctl events list --since 2026-01-01T00:00:00Z --until 2026-01-02T00:00:00Z
+addigyctl events list --level warning            # only this level
+addigyctl events list --action failed            # action name contains text
+addigyctl events list --oldest                   # oldest first, instead of the default newest first
+```
+
+System events are Addigy's audit log: who or what (a device, a user, the platform itself, ...) did what, to what, and whether it succeeded. `--since`/`--until` accept an RFC3339 timestamp or a duration before now (`24h`, `30m`, `7d`); `--since` is required by the endpoint and defaults to `24h`, `--until` defaults to now. `--level` and `--action` are free-text filters against the event's level and action name. There is only one sort dimension (time); it defaults to newest first, and `--oldest` reverses that. Addigy's total event count is capped at a round number (commonly 10000) rather than an exact count once a query matches that many or more, so treat a `total` that round as "at least that many," not exact.
 
 ## Output formats
 

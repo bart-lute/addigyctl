@@ -165,6 +165,56 @@ func TestSearchAlerts(t *testing.T) {
 	}
 }
 
+func TestSearchEvents(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/events/query" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		var body map[string]any
+		if err := json.Unmarshal(b, &body); err != nil {
+			t.Fatal(err)
+		}
+		if body["from_date_time"] != "2026-01-01T00:00:00Z" || body["to_date_time"] != "2026-01-02T00:00:00Z" {
+			t.Errorf("unexpected time range: %s", b)
+		}
+		// Unlike alerts, this endpoint's sort_direction is not inverted:
+		// EventQuery.Desc=true sends the API's own "desc" directly.
+		if body["sort_direction"] != "desc" {
+			t.Errorf("unexpected sort direction: %s", b)
+		}
+		queries, _ := body["queries"].([]any)
+		if len(queries) != 1 {
+			t.Fatalf("expected one query filter, got %s", b)
+		}
+		q0, _ := queries[0].(map[string]any)
+		fields, _ := q0["fields"].([]any)
+		if len(fields) != 1 || fields[0] != "level" || q0["query"] != "warning" {
+			t.Errorf("unexpected query filter: %s", b)
+		}
+		io.WriteString(w, `{"items":[{"event_id":"e1","level":"warning","date":"2026-01-01T12:00:00Z",
+			"action":{"name":"executed","details":"did a thing"},
+			"action_sender":{"type":"device","identifier":"d1","name":"Some Mac"},
+			"action_receiver":{"type":"platform","identifier":"addigy-mdm","name":"Addigy MDM"},
+			"result":{"status":"success"}}],
+			"metadata":{"page":1,"page_count":1,"per_page":20,"result_count":1,"total":1}}`)
+	})
+
+	page, err := api.SearchEvents(context.Background(), EventQuery{
+		From: "2026-01-01T00:00:00Z", To: "2026-01-02T00:00:00Z",
+		Level: "warning", Desc: true, Page: 1, PerPage: 20,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "e1" || page.Items[0].Sender.Name != "Some Mac" {
+		t.Fatalf("unexpected items: %+v", page.Items)
+	}
+	if page.Metadata.Total != 1 {
+		t.Errorf("metadata = %+v", page.Metadata)
+	}
+}
+
 func TestErrorMapping(t *testing.T) {
 	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)

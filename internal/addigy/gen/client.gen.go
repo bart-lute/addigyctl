@@ -365,6 +365,65 @@ type DmCheckinServiceSharedIpad struct {
 	AllowedScopes *[]string `json:"allowedScopes,omitempty"`
 }
 
+// EventsClientAction defines model for events_client.Action.
+type EventsClientAction struct {
+	Details *string            `json:"details,omitempty"`
+	Entity  *EventsClientActor `json:"entity,omitempty"`
+	Name    *string            `json:"name,omitempty"`
+}
+
+// EventsClientActor defines model for events_client.Actor.
+type EventsClientActor struct {
+	Identifier *string `json:"identifier,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	Type       *string `json:"type,omitempty"`
+}
+
+// EventsClientEventResponseItem defines model for events_client.EventResponseItem.
+type EventsClientEventResponseItem struct {
+	Action         *EventsClientAction `json:"action,omitempty"`
+	ActionReceiver *EventsClientActor  `json:"action_receiver,omitempty"`
+	ActionSender   *EventsClientActor  `json:"action_sender,omitempty"`
+
+	// Date Example: 2024-01-01T01:01:01Z
+	Date       *string              `json:"date,omitempty"`
+	EventId    *string              `json:"event_id,omitempty"`
+	Highlights *map[string][]string `json:"highlights,omitempty"`
+	Level      *string              `json:"level,omitempty"`
+	Orgid      *string              `json:"orgid,omitempty"`
+	Result     *EventsClientResult  `json:"result,omitempty"`
+	Source     *string              `json:"source,omitempty"`
+}
+
+// EventsClientQuery defines model for events_client.Query.
+type EventsClientQuery struct {
+	// Fields Example: ["action_sender.type"]
+	Fields *[]string `json:"fields,omitempty"`
+	Query  *string   `json:"query,omitempty"`
+}
+
+// EventsClientResult defines model for events_client.Result.
+type EventsClientResult struct {
+	Details *string `json:"details,omitempty"`
+	Status  *string `json:"status,omitempty"`
+}
+
+// EventsClientSearchEventOptions defines model for events_client.SearchEventOptions.
+type EventsClientSearchEventOptions struct {
+	AggregationIntervalMinutes *int  `json:"aggregation_interval_minutes,omitempty"`
+	Highlight                  *bool `json:"highlight,omitempty"`
+	Keywords                   *bool `json:"keywords,omitempty"`
+}
+
+// EventsServiceListEventsPublicResponse defines model for events_service.ListEventsPublicResponse.
+type EventsServiceListEventsPublicResponse struct {
+	Items       *[]EventsClientEventResponseItem `json:"items,omitempty"`
+	Keywords    *[]string                        `json:"keywords,omitempty"`
+	Metadata    *ResponseEntitiesMetadata        `json:"metadata,omitempty"`
+	SearchAfter *int                             `json:"search_after,omitempty"`
+	Took        *int                             `json:"took,omitempty"`
+}
+
 // HomescreenLayoutsEntitiesIconItem defines model for homescreen_layouts_entities.IconItem.
 type HomescreenLayoutsEntitiesIconItem struct {
 	BundleId    *string                                `json:"bundle_id,omitempty"`
@@ -594,8 +653,32 @@ type ResponseEntitiesResponse struct {
 	Metadata *ResponseEntitiesMetadata `json:"metadata,omitempty"`
 }
 
+// SystemEventsSearchRequestQuery defines model for system_events.searchRequestQuery.
+type SystemEventsSearchRequestQuery struct {
+	// FromDateTime Example: 2024-01-01T01:01:01Z
+	FromDateTime *string                         `json:"from_date_time,omitempty"`
+	Options      *EventsClientSearchEventOptions `json:"options,omitempty"`
+
+	// Page Example: 1
+	Page *int `json:"page,omitempty"`
+
+	// PerPage Example: 10
+	PerPage     *int                 `json:"per_page,omitempty"`
+	Queries     *[]EventsClientQuery `json:"queries,omitempty"`
+	SearchAfter *int                 `json:"search_after,omitempty"`
+
+	// SortDirection Example: asc
+	SortDirection *string `json:"sort_direction,omitempty"`
+
+	// ToDateTime Example: 2024-12-31T01:01:01Z
+	ToDateTime *string `json:"to_date_time,omitempty"`
+}
+
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
 type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
+
+// GetSystemEventsJSONRequestBody defines body for GetSystemEvents for application/json ContentType.
+type GetSystemEventsJSONRequestBody = SystemEventsSearchRequestQuery
 
 // GetAdeTokensJSONRequestBody defines body for GetAdeTokens for application/json ContentType.
 type GetAdeTokensJSONRequestBody = AdeAutomaticEnrollmentRequest
@@ -698,6 +781,24 @@ type ClientInterface interface {
 	// Corresponds with POST /devices (the `GetDevices` operationId).
 	GetDevices(ctx context.Context, body GetDevicesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetSystemEventsWithBody List system events
+	//
+	// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+	GetSystemEventsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSystemEvents List system events
+	//
+	// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+	GetSystemEvents(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetDevicePolicyAssignments Get policy assignments for a device.
 	//
 	// Returns the list of policy ids assigned to the given device.
@@ -792,6 +893,44 @@ func (c *Client) GetDevicesWithBody(ctx context.Context, contentType string, bod
 // Corresponds with POST /devices (the `GetDevices` operationId).
 func (c *Client) GetDevices(ctx context.Context, body GetDevicesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDevicesRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSystemEventsWithBody List system events
+//
+// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+func (c *Client) GetSystemEventsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSystemEventsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSystemEvents List system events
+//
+// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+func (c *Client) GetSystemEvents(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSystemEventsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -968,6 +1107,46 @@ func NewGetDevicesRequestWithBody(server string, contentType string, body io.Rea
 	}
 
 	operationPath := fmt.Sprintf("/devices")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSystemEventsRequest calls the generic GetSystemEvents builder with application/json body
+func NewGetSystemEventsRequest(server string, body GetSystemEventsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetSystemEventsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetSystemEventsRequestWithBody constructs an http.Request for the GetSystemEvents method, with any body, and a specified content type
+func NewGetSystemEventsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/events/query")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1244,6 +1423,24 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /devices (the `GetDevices` operationId).
 	GetDevicesWithResponse(ctx context.Context, body GetDevicesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetDevicesResponse, error)
 
+	// GetSystemEventsWithBodyWithResponse List system events
+	//
+	// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+	GetSystemEventsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetSystemEventsResponse, error)
+
+	// GetSystemEventsWithResponse List system events
+	//
+	// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+	GetSystemEventsWithResponse(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSystemEventsResponse, error)
+
 	// GetDevicePolicyAssignmentsWithResponse Get policy assignments for a device.
 	//
 	// Returns the list of policy ids assigned to the given device.
@@ -1356,6 +1553,61 @@ func (r GetDevicesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetDevicesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSystemEventsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EventsServiceListEventsPublicResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSystemEventsResponse) GetJSON200() *EventsServiceListEventsPublicResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSystemEventsResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSystemEventsResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSystemEventsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSystemEventsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSystemEventsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSystemEventsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -1646,6 +1898,36 @@ func (c *ClientWithResponses) GetDevicesWithResponse(ctx context.Context, body G
 	return ParseGetDevicesResponse(rsp)
 }
 
+// GetSystemEventsWithBodyWithResponse List system events
+//
+// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+func (c *ClientWithResponses) GetSystemEventsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetSystemEventsResponse, error) {
+	rsp, err := c.GetSystemEventsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSystemEventsResponse(rsp)
+}
+
+// GetSystemEventsWithResponse List system events
+//
+// Allows listing system events with highlighting. <br><b>Permission Required: </b>View System Events.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
+func (c *ClientWithResponses) GetSystemEventsWithResponse(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSystemEventsResponse, error) {
+	rsp, err := c.GetSystemEvents(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSystemEventsResponse(rsp)
+}
+
 // GetDevicePolicyAssignmentsWithResponse Get policy assignments for a device.
 //
 // Returns the list of policy ids assigned to the given device.
@@ -1790,6 +2072,46 @@ func ParseGetDevicesResponse(rsp *http.Response) (*GetDevicesResponse, error) {
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSystemEventsResponse parses an HTTP response from a GetSystemEventsWithResponse call
+func ParseGetSystemEventsResponse(rsp *http.Response) (*GetSystemEventsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSystemEventsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EventsServiceListEventsPublicResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 

@@ -55,6 +55,7 @@ type CLI struct {
 	Facts    FactsCmd    `cmd:"" help:"Discover the fact identifiers available for devices."`
 	Ade      AdeCmd      `cmd:"" help:"Query Automated Device Enrollment (ADE) tokens."`
 	Alerts   AlertsCmd   `cmd:"" help:"Query received alerts."`
+	Events   EventsCmd   `cmd:"" help:"Query system events (Addigy's audit log)."`
 	Config   ConfigCmd   `cmd:"" help:"Manage the config file."`
 }
 

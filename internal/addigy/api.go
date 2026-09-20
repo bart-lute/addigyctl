@@ -452,3 +452,104 @@ func (a *API) SearchAlerts(ctx context.Context, q AlertQuery) (*AlertPage, error
 	}
 	return &AlertPage{Items: raw.Items, Metadata: raw.Metadata}, nil
 }
+
+// ---- Events -------------------------------------------------------------
+
+// EventActor is who or what sent, received, or is the subject of an event:
+// a device, a user, an API key, the Addigy platform itself, and so on.
+type EventActor struct {
+	Type       string `json:"type"`
+	Identifier string `json:"identifier"`
+	Name       string `json:"name"`
+}
+
+// EventAction is what happened in an event.
+type EventAction struct {
+	Name    string      `json:"name"`
+	Details string      `json:"details"`
+	Entity  *EventActor `json:"entity"`
+}
+
+// EventResult is the outcome of an event's action.
+type EventResult struct {
+	Status  string `json:"status"`
+	Details string `json:"details"`
+}
+
+// Event is a system event (Addigy's audit log entry): who/what did what to
+// what, and whether it succeeded.
+type Event struct {
+	ID       string      `json:"event_id"`
+	Level    string      `json:"level"`
+	Date     string      `json:"date"`
+	Source   string      `json:"source"`
+	Action   EventAction `json:"action"`
+	Sender   EventActor  `json:"action_sender"`
+	Receiver EventActor  `json:"action_receiver"`
+	Result   EventResult `json:"result"`
+}
+
+// EventPage is one page of system-events results.
+type EventPage struct {
+	Items    []Event
+	Metadata PageMetadata
+}
+
+// EventQuery selects, sorts and paginates the events SearchEvents returns.
+// From and To are required by the endpoint (RFC3339); it returns no results
+// without them. Level and Action are free-text filters against the "level"
+// and "action.name" fields respectively.
+type EventQuery struct {
+	From, To      string
+	Level         string
+	Action        string
+	Desc          bool
+	Page, PerPage int
+}
+
+func (q EventQuery) body() gen.SystemEventsSearchRequestQuery {
+	dir := "asc"
+	if q.Desc {
+		dir = "desc"
+	}
+	b := gen.SystemEventsSearchRequestQuery{
+		FromDateTime:  &q.From,
+		ToDateTime:    &q.To,
+		Page:          &q.Page,
+		PerPage:       &q.PerPage,
+		SortDirection: &dir,
+	}
+	var queries []gen.EventsClientQuery
+	if q.Level != "" {
+		queries = append(queries, gen.EventsClientQuery{Fields: &[]string{"level"}, Query: &q.Level})
+	}
+	if q.Action != "" {
+		queries = append(queries, gen.EventsClientQuery{Fields: &[]string{"action.name"}, Query: &q.Action})
+	}
+	if len(queries) > 0 {
+		b.Queries = &queries
+	}
+	return b
+}
+
+// SearchEvents runs a filtered, sorted, paginated system-events query
+// (POST /events/query). Unlike SearchAlerts, this endpoint's sort_direction
+// is not inverted: "asc" is oldest first, "desc" is newest first, verified
+// against a live tenant.
+func (a *API) SearchEvents(ctx context.Context, q EventQuery) (*EventPage, error) {
+	resp, err := a.c.GetSystemEventsWithResponse(ctx, q.body())
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var raw struct {
+		Items    []Event      `json:"items"`
+		Metadata PageMetadata `json:"metadata"`
+	}
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, fmt.Errorf("decoding events: %w", err)
+	}
+	return &EventPage{Items: raw.Items, Metadata: raw.Metadata}, nil
+}
