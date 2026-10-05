@@ -37,17 +37,22 @@ func (c *ConfigShowCmd) Run(app *App) error {
 		return err
 	}
 	view := struct {
-		ConfigFile  string   `json:"config_file"`
-		APIKey      string   `json:"api_key"`
-		BaseURL     string   `json:"base_url"`
-		OrgID       string   `json:"org_id"`
-		DeviceFacts []string `json:"device_facts"`
+		ConfigFile   string   `json:"config_file"`
+		APIKey       string   `json:"api_key"`
+		BaseURL      string   `json:"base_url"`
+		OrgID        string   `json:"org_id"`
+		DeviceFacts  []string `json:"device_facts"`
+		SoftwareRoot string   `json:"software_root"`
 	}{
-		ConfigFile:  app.CfgPath,
-		APIKey:      redact(app.G.APIKey),
-		BaseURL:     app.G.BaseURL,
-		OrgID:       output.Value(app.G.OrgID),
-		DeviceFacts: firstNonEmpty(app.Cfg.DeviceFacts, defaultDeviceFacts),
+		ConfigFile:   app.CfgPath,
+		APIKey:       redact(app.G.APIKey),
+		BaseURL:      app.G.BaseURL,
+		OrgID:        output.Value(app.G.OrgID),
+		DeviceFacts:  firstNonEmpty(app.Cfg.DeviceFacts, defaultDeviceFacts),
+		SoftwareRoot: app.G.SoftwareRoot,
+	}
+	if view.SoftwareRoot == "" {
+		view.SoftwareRoot = "(not set; use --dir with smart-software commands)"
 	}
 	if app.G.OrgID == "" {
 		view.OrgID = "(discovered from policies when needed)"

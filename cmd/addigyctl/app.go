@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ type App struct {
 	G       *Globals
 	Cfg     config.File
 	CfgPath string
+	In      io.Reader // for confirmation prompts
 	Out     io.Writer
 	Err     io.Writer
 
@@ -65,8 +67,12 @@ func newApp(ctx context.Context, g *Globals) (*App, error) {
 	if g.OrgID == "" {
 		g.OrgID = cfg.OrgID
 	}
+	if g.SoftwareRoot == "" {
+		g.SoftwareRoot = cfg.SoftwareRoot
+	}
+	g.SoftwareRoot = expandHome(g.SoftwareRoot)
 
-	return &App{Ctx: ctx, G: g, Cfg: cfg, CfgPath: path, Out: os.Stdout, Err: os.Stderr}, nil
+	return &App{Ctx: ctx, G: g, Cfg: cfg, CfgPath: path, In: os.Stdin, Out: os.Stdout, Err: os.Stderr}, nil
 }
 
 // Format is the output format. It was validated in newApp; anything invalid
@@ -212,4 +218,29 @@ func expandHome(p string) string {
 		}
 	}
 	return p
+}
+
+// confirm asks a yes/no question on stderr and reads the answer from In.
+// Anything but "y" or "yes" is no. When In is not a terminal (a script or
+// pipe) it does not ask and fails instead, so an unattended write never
+// hangs or proceeds by accident; scripts pass --yes.
+func (a *App) confirm(question string) (bool, error) {
+	if f, ok := a.In.(*os.File); ok {
+		if st, err := f.Stat(); err != nil || st.Mode()&os.ModeCharDevice == 0 {
+			return false, errors.New("not asking for confirmation without a terminal; pass --yes to proceed or --dry-run to only show the change")
+		}
+	}
+	if a.In == nil {
+		return false, errors.New("no input to confirm from; pass --yes or --dry-run")
+	}
+	fmt.Fprintf(a.Err, "%s [y/N] ", question)
+	line, err := bufio.NewReader(a.In).ReadString('\n')
+	if err != nil && line == "" {
+		return false, nil
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return true, nil
+	}
+	return false, nil
 }

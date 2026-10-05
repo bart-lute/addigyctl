@@ -39,6 +39,9 @@ type File struct {
 	// whitespace-separated columns. Defaults to false; overridden by
 	// --borders/--no-borders.
 	Borders bool `json:"borders,omitempty"`
+	// SoftwareRoot is the folder holding Smart Software item folders, so
+	// --item <name> can stand for <SoftwareRoot>/<name>. "~" is expanded.
+	SoftwareRoot string `json:"software_root,omitempty"`
 }
 
 // Template is what `addigyctl config init` writes.

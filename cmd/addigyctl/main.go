@@ -18,14 +18,15 @@ var version = "dev"
 // Globals are the flags shared by every command. Each can also be set with an
 // environment variable or in the config file (flags > env > config file).
 type Globals struct {
-	APIKey     string `name:"api-key" env:"ADDIGY_API_KEY" hidden:"" help:"Addigy API key. Prefer the env var or config file over this flag."`
-	BaseURL    string `name:"base-url" env:"ADDIGY_BASE_URL" help:"API base URL (default https://api.addigy.com/api/v2)."`
-	OrgID      string `name:"org-id" env:"ADDIGY_ORG_ID" help:"Organization ID. Discovered from your policies when unset."`
-	ConfigFile string `name:"config-file" env:"ADDIGYCTL_CONFIG" help:"Path to the config file (default: <user config dir>/addigyctl/config.json)."`
-	Output     string `name:"output" short:"o" placeholder:"FORMAT" help:"Output format: table (default), json or csv."`
-	JSON       bool   `name:"json" short:"j" help:"Print raw JSON instead of a table (same as --output json)."`
-	Borders    *bool  `name:"borders" negatable:"" help:"Draw table output with borders (default: off, or the config file's \"borders\" key)."`
-	Debug      bool   `name:"debug" help:"Log HTTP requests to stderr."`
+	APIKey       string `name:"api-key" env:"ADDIGY_API_KEY" hidden:"" help:"Addigy API key. Prefer the env var or config file over this flag."`
+	BaseURL      string `name:"base-url" env:"ADDIGY_BASE_URL" help:"API base URL (default https://api.addigy.com/api/v2)."`
+	OrgID        string `name:"org-id" env:"ADDIGY_ORG_ID" help:"Organization ID. Discovered from your policies when unset."`
+	SoftwareRoot string `name:"software-root" env:"ADDIGYCTL_SOFTWARE_ROOT" placeholder:"DIR" help:"Folder holding Smart Software item folders, for --item."`
+	ConfigFile   string `name:"config-file" env:"ADDIGYCTL_CONFIG" help:"Path to the config file (default: <user config dir>/addigyctl/config.json)."`
+	Output       string `name:"output" short:"o" placeholder:"FORMAT" help:"Output format: table (default), json or csv."`
+	JSON         bool   `name:"json" short:"j" help:"Print raw JSON instead of a table (same as --output json)."`
+	Borders      *bool  `name:"borders" negatable:"" help:"Draw table output with borders (default: off, or the config file's \"borders\" key)."`
+	Debug        bool   `name:"debug" help:"Log HTTP requests to stderr."`
 }
 
 // Format returns the requested output format. --json is shorthand for
@@ -50,20 +51,22 @@ type CLI struct {
 
 	Version kong.VersionFlag `name:"version" help:"Print version and exit."`
 
-	Devices  DevicesCmd  `cmd:"" help:"Query devices."`
-	Policies PoliciesCmd `cmd:"" help:"Query policies."`
-	Facts    FactsCmd    `cmd:"" help:"Discover the fact identifiers available for devices."`
-	Ade      AdeCmd      `cmd:"" help:"Query Automated Device Enrollment (ADE) tokens."`
-	Alerts   AlertsCmd   `cmd:"" help:"Query received alerts."`
-	Events   EventsCmd   `cmd:"" help:"Query system events (Addigy's audit log)."`
-	Config   ConfigCmd   `cmd:"" help:"Manage the config file."`
+	Devices       DevicesCmd       `cmd:"" help:"Query devices."`
+	Policies      PoliciesCmd      `cmd:"" help:"Query policies."`
+	Facts         FactsCmd         `cmd:"" help:"Discover the fact identifiers available for devices."`
+	Ade           AdeCmd           `cmd:"" help:"Query Automated Device Enrollment (ADE) tokens."`
+	Alerts        AlertsCmd        `cmd:"" help:"Query received alerts."`
+	Events        EventsCmd        `cmd:"" help:"Query system events (Addigy's audit log)."`
+	SmartSoftware SmartSoftwareCmd `cmd:"" name:"smart-software" help:"Query, export and publish Smart Software."`
+	Files         FilesCmd         `cmd:"" help:"Find uploaded files."`
+	Config        ConfigCmd        `cmd:"" help:"Manage the config file."`
 }
 
 func main() {
 	var cli CLI
 	kctx := kong.Parse(&cli,
 		kong.Name("addigyctl"),
-		kong.Description("Query the Addigy API (v2) for a single tenant."),
+		kong.Description("Query the Addigy API (v2) for a single tenant, and publish Smart Software."),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
 		kong.Vars{"version": version},
