@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool to query the [Addigy](https://addigy.com) v2 API for a single tenant. It is read-only and covers devices, policies, facts, ADE tokens, alerts and system events.
+A small command line tool for the [Addigy](https://addigy.com) v2 API of a single tenant. It queries devices, policies, facts, ADE tokens, alerts, system events and Smart Software, and it can publish new Smart Software versions from item folders kept as code (see [Smart Software](#smart-software)). Publishing is its only write operation; everything else is read-only.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -47,6 +47,7 @@ Settings are resolved in this order: command-line flags, environment variables, 
 | Timezone     | n/a               | n/a                   | `timezone`      |
 | Date format  | n/a               | n/a                   | `date_format`   |
 | Table borders | `--borders` / `--no-borders` | n/a  | `borders`       |
+| Software root | `--software-root` | `ADDIGYCTL_SOFTWARE_ROOT` | `software_root` |
 
 The config file is `config.json` in the user config directory: `~/Library/Application Support/addigyctl/config.json` on macOS, `$XDG_CONFIG_HOME/addigyctl/config.json` (or `~/.config/addigyctl/config.json`) on Linux. Create a template with:
 
@@ -64,11 +65,12 @@ addigyctl config show     # effective configuration, API key redacted
   "device_facts": ["serial_number", "device_name", "os_version"],
   "timezone": "Europe/Amsterdam",
   "date_format": "dd-mm-yyyy hh:mm:ss",
-  "borders": false
+  "borders": false,
+  "software_root": "~/src/addigy-software"
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -79,6 +81,8 @@ addigyctl facts    list
 addigyctl ade      tokens
 addigyctl alerts   list
 addigyctl events   list
+addigyctl smart-software list | get | export | new-version
+addigyctl files    find
 addigyctl config   path | init | show
 ```
 
@@ -171,6 +175,46 @@ addigyctl events list --oldest                   # oldest first, instead of the 
 
 System events are Addigy's audit log: who or what (a device, a user, the platform itself, ...) did what, to what, and whether it succeeded. `--since`/`--until` accept an RFC3339 timestamp or a duration before now (`24h`, `30m`, `7d`); `--since` is required by the endpoint and defaults to `24h`, `--until` defaults to now. `--level` and `--action` are free-text filters against the event's level and action name. There is only one sort dimension (time); it defaults to newest first, and `--oldest` reverses that. Addigy's total event count is capped at a round number (commonly 10000) rather than an exact count once a query matches that many or more, so treat a `total` that round as "at least that many," not exact.
 
+### Smart Software
+
+Smart Software items can be kept as code: one folder per item, under version control, from which new versions are published. addigyctl defines the folder format and knows nothing about specific software; what goes in the folders is up to you.
+
+```sh
+addigyctl smart-software list                  # one row per version, archived ones hidden
+addigyctl smart-software list --name zoom --archived
+addigyctl smart-software get Airtame           # latest version as JSON
+addigyctl smart-software export Airtame --placeholders   # → <software_root>/airtame
+addigyctl smart-software new-version Airtame --to 4.16.0 --dry-run   # finds Airtame-4.16.0.pkg itself
+addigyctl smart-software new-version Airtame --to 4.16.0
+addigyctl files find --name Airtame-4.16       # look up uploads by name (loose search) or --md5
+```
+
+**Identity.** Every version of an item shares its `identifier` (`<name>-<uuid>`); each version has its own `instruction_id`. Commands take a version's `instruction_id`, or an item's `identifier` or name, which mean its latest version: the highest version number, compared naturally (`9.2` < `10.0`).
+
+**Item folders.** `export` writes one:
+
+```
+airtame/
+  item.yaml              settings: category, priority, conditions, profiles, icon, downloads, ...
+  install.sh             installation script
+  condition.sh           condition script
+  remove.sh              remove script
+  .addigyctl-state.yaml  the Addigy version the folder last matched; commit it, don't edit it
+```
+
+An empty script has no file. `item.yaml` holds only the settings you can edit; fields Addigy manages itself (label, provider, ...) are left out. addigyctl only touches these files, so the folder can hold others (build or test configuration, say). Without `--dir` or `--item`, `export` names the folder after the item in the software root; it never overwrites another item's folder, and only overwrites its own with `--force`.
+
+**Downloads.** `item.yaml` lists a version's files by name pattern under `version_downloads`, e.g. `Airtame-{{.Version}}.pkg`; publishing 4.16.0 uses the upload named exactly `Airtame-4.16.0.pkg`. The list can have any number of patterns, including none; edit it when a release needs other files. Addigy allows several uploads with the same name: identical ones (same MD5) are fine and the newest is used, different ones are refused with a list to pick from. `--file` replaces the list for one run and takes an Addigy file ID, a local file (matched to the upload with the same content), or an exact file name. Files every version needs can go under `downloads` by file ID. `export --placeholders` turns the exported version's download names into patterns when they contain the version.
+
+**Placeholders.** Scripts and `item.yaml` values can use `{{.Version}}` (the version being published) and `{{.Filename}}` (the name of the version's first download), in Go template syntax; quote them in YAML (`version: "{{.Version}}"`). A version number usually appears in both: an install script's `VERSION=` and the "install if older than" check in `predefined_conditions.app_exists.version`. `export --placeholders` replaces the exported version with `{{.Version}}` and reports how many it replaced per file. That is plain text matching, so review it: a version like `1.0` also matches `<?xml version="1.0"?>`.
+
+**Publishing.** `new-version` renders the folder for the new version, adds the `--file` downloads (plus any listed under `downloads:` in `item.yaml`), shows the change against the current version, and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The version is `--to`, as `--version` prints addigyctl's own version. It refuses a version that already exists, and a download that isn't uploaded or is ambiguous; with `--force` it publishes anyway when:
+
+- the version is not higher than the current one, or
+- the item was changed in Addigy outside the folder: a version published elsewhere, or the current version edited in the Addigy UI. The state file tells these apart from changes made in the folder, which are what you are publishing.
+
+A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.
+
 ## Output formats
 
 | Flag                      | Output |
@@ -186,7 +230,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get` and `config show` only print JSON. The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used); everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export` and `new-version` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` writes its change preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used); everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 
@@ -215,7 +259,7 @@ make generate    # Swagger 2.0 -> OpenAPI 3, then oapi-codegen
 make build
 ```
 
-The Addigy spec has more than 300 operations; only the ones in `oapi-codegen.yaml` are generated (`GetDevices`, `GetPolicies`, `GetDevicePolicyAssignments`, `GetAvailableFacts`, `GetAdeTokens`). To use another endpoint:
+The Addigy spec has more than 300 operations; only the ones listed in `oapi-codegen.yaml` are generated. To use another endpoint:
 
 1. Find its `operationId` in `api/godoc_swagger.json`.
 2. Add it to `include-operation-ids` in `oapi-codegen.yaml`.
@@ -227,8 +271,9 @@ The wrapper in `internal/addigy` only decodes the fields the CLI needs and keeps
 ## Project layout
 
 ```
-cmd/addigyctl/           Kong commands (devices, policies, facts, ade, config)
+cmd/addigyctl/           Kong commands
 internal/addigy/         thin wrapper over the generated client
+internal/swfolder/       the Smart Software item folder format and placeholders
 internal/addigy/gen/     generated client and models (do not edit)
 internal/config/         config file handling
 internal/output/         table, CSV and JSON rendering
