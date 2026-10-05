@@ -126,6 +126,16 @@ func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
 	for _, f := range files {
 		next.Downloads = append(next.Downloads, swfolder.Download{ID: f.ID})
 	}
+	// Losing every download is almost always a forgotten version_downloads
+	// entry (e.g. an upload named in a way export couldn't turn into a
+	// pattern), and a version without its installer installs nothing.
+	if len(next.Downloads) == 0 && len(current.Downloads) > 0 {
+		if !c.Force {
+			return fmt.Errorf("not publishing: %s %s has %d download(s), but %s would have none; add the files to version_downloads (or downloads) in %s, or pass --file. Use --force if it really needs none",
+				current.BaseIdentifier, swVersion(current), len(current.Downloads), c.Version, swfolder.ItemFile)
+		}
+		problems = append(problems, fmt.Sprintf("%s has no downloads, while %s had %d", c.Version, swVersion(current), len(current.Downloads)))
+	}
 	body, err := newVersionBody(next, c.Version)
 	if err != nil {
 		return err

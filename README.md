@@ -210,7 +210,8 @@ An empty script has no file. `item.yaml` holds only the settings you can edit; f
 
 **Publishing.** `new-version` renders the folder for the new version, adds the `--file` downloads (plus any listed under `downloads:` in `item.yaml`), shows the change against the current version, and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The version is `--to`, as `--version` prints addigyctl's own version. It refuses a version that already exists, and a download that isn't uploaded or is ambiguous; with `--force` it publishes anyway when:
 
-- the version is not higher than the current one, or
+- the version is not higher than the current one,
+- it would have no downloads while the current version has some (usually a forgotten `version_downloads` entry), or
 - the item was changed in Addigy outside the folder: a version published elsewhere, or the current version edited in the Addigy UI. The state file tells these apart from changes made in the folder, which are what you are publishing.
 
 A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.

@@ -306,10 +306,21 @@ func TestNewVersionDownloadCounts(t *testing.T) {
 		t.Errorf("two files: %s, %v", dl, err)
 	}
 
+	// Going from one file to none is refused: usually a forgotten pattern.
 	fake, app, _ = setupPublish(t)
-	dl, err = publishBody(t, fake, app, []string{})
-	if err != nil || dl != `[]` {
-		t.Errorf("no files: %s, %v", dl, err)
+	_, err = publishBody(t, fake, app, []string{})
+	if err == nil || !strings.Contains(err.Error(), "would have none") {
+		t.Fatalf("expected a refusal to drop every download, got %v", err)
+	}
+	if len(fake.created) != 0 {
+		t.Fatal("nothing may be created when refusing")
+	}
+	// --force publishes it anyway.
+	if err := (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.16.0", Yes: true, Force: true}).Run(app); err != nil {
+		t.Fatalf("--force: %v", err)
+	}
+	if dl, _ := json.Marshal(fake.created[0]["downloads"]); string(dl) != `[]` {
+		t.Errorf("no files with --force: %s", dl)
 	}
 }
 
