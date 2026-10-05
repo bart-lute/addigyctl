@@ -21,3 +21,8 @@ output-options:
     - GetAdeTokens
     - GetReceivedAlertsByFilter
     - GetSystemEvents
+    - GetSmartSoftwareItems
+    - GetSmartSoftware
+    - GetOrganizationFiles
+    - GetOrganizationFile
+    - CreateSmartSoftwareNewVersion

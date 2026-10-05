@@ -407,9 +407,9 @@ func (q AlertQuery) body() gen.AlertEntitiesPaginatedReceivedAlertsRequestQuery 
 	// verified against a live tenant. Flip it here so AlertQuery.Desc means
 	// what callers expect: ascending (oldest first) by default, descending
 	// (newest first) with Desc.
-	dir := gen.Desc
+	dir := gen.AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionDesc
 	if q.Desc {
-		dir = gen.Asc
+		dir = gen.AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionAsc
 	}
 	b := gen.AlertEntitiesPaginatedReceivedAlertsRequestQuery{
 		Page:          &q.Page,
@@ -552,4 +552,236 @@ func (a *API) SearchEvents(ctx context.Context, q EventQuery) (*EventPage, error
 		return nil, fmt.Errorf("decoding events: %w", err)
 	}
 	return &EventPage{Items: raw.Items, Metadata: raw.Metadata}, nil
+}
+
+// ---- Smart Software ---------------------------------------------------------
+
+// SmartSoftware is one version of a Smart Software item, as the CLI displays
+// it. All versions of an item share Identifier ("<base>-<uuid>");
+// InstructionID is unique per version and is what SmartSoftware (GET by id)
+// takes. BaseIdentifier is the item's name without a version suffix.
+type SmartSoftware struct {
+	Identifier     string          `json:"identifier"`
+	InstructionID  string          `json:"instruction_id"`
+	BaseIdentifier string          `json:"base_identifier"`
+	Name           string          `json:"name"`
+	Version        any             `json:"version"` // a string in practice, but untyped in Addigy's spec
+	Category       string          `json:"category"`
+	Archived       bool            `json:"archived"`
+	Downloads      []File          `json:"downloads"`
+	Raw            json.RawMessage `json:"-"` // the full item exactly as returned
+}
+
+// SmartSoftwarePage is one page of Smart Software results.
+type SmartSoftwarePage struct {
+	Items    []SmartSoftware
+	Metadata PageMetadata
+}
+
+// SmartSoftwareQuery selects, sorts and paginates the Smart Software versions
+// SearchSmartSoftware returns. Every version is its own result; Identifier
+// selects all versions of one item. A nil Archived matches both archived and
+// active versions.
+type SmartSoftwareQuery struct {
+	Identifier    string
+	NameContains  string
+	Archived      *bool
+	SortField     string // e.g. "name", "base_identifier"
+	Desc          bool
+	Page, PerPage int // PerPage is at most 100
+}
+
+func (q SmartSoftwareQuery) body() gen.SmartSoftwareSmartSoftwareQueryRequest {
+	// page, per_page, sort_field and sort_direction are all required.
+	sortField := q.SortField
+	if sortField == "" {
+		sortField = "name"
+	}
+	// Unlike alerts, this endpoint's sort_direction is not inverted, verified
+	// against a live tenant.
+	dir := gen.SmartSoftwareSmartSoftwareQueryRequestSortDirectionAsc
+	if q.Desc {
+		dir = gen.SmartSoftwareSmartSoftwareQueryRequestSortDirectionDesc
+	}
+	b := gen.SmartSoftwareSmartSoftwareQueryRequest{
+		Page:          max(q.Page, 1),
+		PerPage:       q.PerPage,
+		SortField:     sortField,
+		SortDirection: dir,
+	}
+	if q.Identifier != "" || q.NameContains != "" || q.Archived != nil {
+		f := gen.SmartSoftwareFilter{Archived: q.Archived}
+		if q.Identifier != "" {
+			f.Identifier = &q.Identifier
+		}
+		if q.NameContains != "" {
+			f.NameContains = &q.NameContains
+		}
+		b.Query = &f
+	}
+	return b
+}
+
+// SearchSmartSoftware runs a filtered, sorted, paginated Smart Software query
+// (POST /oa/smart-software/query).
+func (a *API) SearchSmartSoftware(ctx context.Context, q SmartSoftwareQuery) (*SmartSoftwarePage, error) {
+	resp, err := a.c.GetSmartSoftwareItemsWithResponse(ctx, q.body())
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var raw struct {
+		Items    []json.RawMessage `json:"items"`
+		Metadata PageMetadata      `json:"metadata"`
+	}
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, fmt.Errorf("decoding smart software: %w", err)
+	}
+	page := &SmartSoftwarePage{Items: make([]SmartSoftware, 0, len(raw.Items)), Metadata: raw.Metadata}
+	for _, r := range raw.Items {
+		s, err := decodeSmartSoftware(r)
+		if err != nil {
+			return nil, err
+		}
+		page.Items = append(page.Items, *s)
+	}
+	return page, nil
+}
+
+// SmartSoftware fetches one Smart Software version by its instruction ID
+// (GET /o/{organization_id}/smart-software/{id}).
+func (a *API) SmartSoftware(ctx context.Context, orgID, instructionID string) (*SmartSoftware, error) {
+	resp, err := a.c.GetSmartSoftwareWithResponse(ctx, orgID, instructionID)
+	if err != nil {
+		return nil, err
+	}
+	// An unknown id is a 500 whose nested error chain says "not found";
+	// report it as the 404 it is.
+	if resp.StatusCode() == http.StatusInternalServerError && bytes.Contains(resp.Body, []byte("custom software not found")) {
+		return nil, &APIError{Status: http.StatusNotFound, Message: fmt.Sprintf("no smart software with instruction id %q", instructionID)}
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	return decodeSmartSoftware(resp.Body)
+}
+
+// NewSmartSoftwareVersion creates a new version of the item whose current
+// version has the given instruction ID
+// (POST /o/{organization_id}/smart-software/{id}/new-version). body is the
+// new version as a smart_software.UpdateSmartSoftwareRequest; the response is
+// the created version.
+func (a *API) NewSmartSoftwareVersion(ctx context.Context, orgID, instructionID string, body json.RawMessage) (*SmartSoftware, error) {
+	resp, err := a.c.CreateSmartSoftwareNewVersionWithBodyWithResponse(ctx, orgID, instructionID, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	return decodeSmartSoftware(resp.Body)
+}
+
+func decodeSmartSoftware(r json.RawMessage) (*SmartSoftware, error) {
+	var s SmartSoftware
+	if err := json.Unmarshal(r, &s); err != nil {
+		return nil, fmt.Errorf("decoding smart software: %w", err)
+	}
+	s.Raw = r
+	return &s, nil
+}
+
+// ---- Files ------------------------------------------------------------------
+
+// File is a file uploaded to the organization's Addigy file storage, such as
+// a Smart Software installer.
+type File struct {
+	ID          string `json:"id"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+	Size        int64  `json:"size"`
+	MD5Hash     string `json:"md5_hash"`
+	Created     string `json:"created"`
+	UserEmail   string `json:"user_email"`
+	Provider    string `json:"provider"`
+}
+
+// FilePage is one page of file results.
+type FilePage struct {
+	Items    []File
+	Metadata PageMetadata
+}
+
+// FileQuery selects, sorts and paginates the files SearchFiles returns.
+// SearchTerm searches file names, case-insensitively and loosely: Addigy also
+// returns near matches.
+type FileQuery struct {
+	IDs           []string
+	MD5Hashes     []string
+	SearchTerm    string
+	SortField     string // e.g. "created", "filename", "size"
+	Desc          bool
+	Page, PerPage int // PerPage is at most 100
+}
+
+func (q FileQuery) body() gen.FilesOrganizationFilesRequest {
+	// The endpoint 400s without a page. sort_direction is not inverted.
+	page := max(q.Page, 1)
+	b := gen.FilesOrganizationFilesRequest{Page: &page, PerPage: &q.PerPage}
+	if q.SortField != "" {
+		dir := "asc"
+		if q.Desc {
+			dir = "desc"
+		}
+		b.SortField = &q.SortField
+		b.SortDirection = &dir
+	}
+	if len(q.IDs) > 0 {
+		b.Ids = &q.IDs
+	}
+	if len(q.MD5Hashes) > 0 {
+		b.Md5Hash = &q.MD5Hashes
+	}
+	if q.SearchTerm != "" {
+		b.SearchTerm = &q.SearchTerm
+	}
+	return b
+}
+
+// SearchFiles runs a filtered, sorted, paginated file query
+// (POST /oa/files/query).
+func (a *API) SearchFiles(ctx context.Context, q FileQuery) (*FilePage, error) {
+	resp, err := a.c.GetOrganizationFilesWithResponse(ctx, q.body())
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var raw struct {
+		Items    []File       `json:"items"`
+		Metadata PageMetadata `json:"metadata"`
+	}
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, fmt.Errorf("decoding files: %w", err)
+	}
+	return &FilePage{Items: raw.Items, Metadata: raw.Metadata}, nil
+}
+
+// File fetches one file's metadata by id (GET /oa/files/{file_id}).
+func (a *API) File(ctx context.Context, id string) (*File, error) {
+	resp, err := a.c.GetOrganizationFileWithResponse(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var f File
+	if err := json.Unmarshal(resp.Body, &f); err != nil {
+		return nil, fmt.Errorf("decoding file: %w", err)
+	}
+	return &f, nil
 }

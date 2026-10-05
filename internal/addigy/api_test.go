@@ -215,6 +215,136 @@ func TestSearchEvents(t *testing.T) {
 	}
 }
 
+func TestSearchSmartSoftware(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v2/oa/smart-software/query" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		var body map[string]any
+		if err := json.Unmarshal(b, &body); err != nil {
+			t.Fatal(err)
+		}
+		if body["page"] != float64(1) || body["per_page"] != float64(50) || body["sort_field"] != "name" || body["sort_direction"] != "desc" {
+			t.Errorf("unexpected body: %s", b)
+		}
+		q, _ := body["query"].(map[string]any)
+		if q["name_contains"] != "zoom" || q["archived"] != false || q["identifier"] != nil {
+			t.Errorf("unexpected query: %s", b)
+		}
+		io.WriteString(w, `{"items":[{"identifier":"Zoom-u1","instruction_id":"i2","base_identifier":"Zoom","name":"Zoom (6.1)",
+			"version":"6.1","archived":false,"installation_script":"echo hi",
+			"downloads":[{"id":"f1","filename":"zoom.pkg","size":42,"md5_hash":"abc"}]}],
+			"metadata":{"page":1,"page_count":1,"per_page":50,"result_count":1,"total":1}}`)
+	})
+
+	archived := false
+	page, err := api.SearchSmartSoftware(context.Background(), SmartSoftwareQuery{
+		NameContains: "zoom", Archived: &archived, Desc: true, PerPage: 50,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("unexpected items: %+v", page.Items)
+	}
+	s := page.Items[0]
+	if s.Identifier != "Zoom-u1" || s.InstructionID != "i2" || s.Version != "6.1" {
+		t.Errorf("item = %+v", s)
+	}
+	if len(s.Downloads) != 1 || s.Downloads[0].ID != "f1" || s.Downloads[0].Size != 42 {
+		t.Errorf("downloads = %+v", s.Downloads)
+	}
+	if !strings.Contains(string(s.Raw), `"installation_script":"echo hi"`) {
+		t.Errorf("raw item not preserved: %s", s.Raw)
+	}
+}
+
+func TestSmartSoftwareNotFound(t *testing.T) {
+	// Addigy reports an unknown id as a 500 with "not found" deep in the chain.
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/o/o1/smart-software/nope" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, `{"message":"error getting smart software","error_chain":{"message":"error getting custom software",
+			"error_chain":{"message":"","internal_message":"custom software not found"}}}`)
+	})
+	_, err := api.SmartSoftware(context.Background(), "o1", "nope")
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusNotFound || !strings.Contains(err.Error(), `"nope"`) {
+		t.Errorf("expected a 404 naming the id, got %v", err)
+	}
+}
+
+func TestNewSmartSoftwareVersion(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v2/o/o1/smart-software/i1/new-version" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		if string(b) != `{"version":"2.0"}` {
+			t.Errorf("body not sent as given: %s", b)
+		}
+		io.WriteString(w, `{"identifier":"X-u1","instruction_id":"i2","version":"2.0"}`)
+	})
+	s, err := api.NewSmartSoftwareVersion(context.Background(), "o1", "i1", json.RawMessage(`{"version":"2.0"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.InstructionID != "i2" || len(s.Raw) == 0 {
+		t.Errorf("created version = %+v", s)
+	}
+}
+
+func TestSearchFiles(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v2/oa/files/query" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		var body map[string]any
+		if err := json.Unmarshal(b, &body); err != nil {
+			t.Fatal(err)
+		}
+		// page is always sent: the endpoint 400s without it.
+		if body["page"] != float64(1) || body["sort_field"] != "created" || body["sort_direction"] != "desc" {
+			t.Errorf("unexpected body: %s", b)
+		}
+		if h, _ := body["md5_hash"].([]any); len(h) != 1 || h[0] != "abc" {
+			t.Errorf("unexpected md5_hash: %s", b)
+		}
+		if _, ok := body["search_term"]; ok {
+			t.Errorf("search_term sent though empty: %s", b)
+		}
+		io.WriteString(w, `{"items":[{"id":"f1","filename":"zoom.pkg","size":42,"md5_hash":"abc","created":"2026-08-13T12:57:17Z"}],
+			"metadata":{"page":1,"page_count":1,"per_page":10,"result_count":1,"total":1}}`)
+	})
+	page, err := api.SearchFiles(context.Background(), FileQuery{MD5Hashes: []string{"abc"}, SortField: "created", Desc: true, PerPage: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].Filename != "zoom.pkg" || page.Metadata.Total != 1 {
+		t.Errorf("unexpected page: %+v", page)
+	}
+}
+
+func TestFile(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/oa/files/f1" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		io.WriteString(w, `{"id":"f1","filename":"zoom.pkg","size":42}`)
+	})
+	f, err := api.File(context.Background(), "f1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.ID != "f1" || f.Filename != "zoom.pkg" || f.Size != 42 {
+		t.Errorf("file = %+v", f)
+	}
+}
+
 func TestErrorMapping(t *testing.T) {
 	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)

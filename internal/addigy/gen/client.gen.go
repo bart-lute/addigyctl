@@ -18,19 +18,19 @@ import (
 
 // Defines values for AlertEntitiesFilterRemediationStatus.
 const (
-	Done    AlertEntitiesFilterRemediationStatus = "Done"
-	Failed  AlertEntitiesFilterRemediationStatus = "Failed"
-	Pending AlertEntitiesFilterRemediationStatus = "Pending"
+	AlertEntitiesFilterRemediationStatusDone    AlertEntitiesFilterRemediationStatus = "Done"
+	AlertEntitiesFilterRemediationStatusFailed  AlertEntitiesFilterRemediationStatus = "Failed"
+	AlertEntitiesFilterRemediationStatusPending AlertEntitiesFilterRemediationStatus = "Pending"
 )
 
 // Valid indicates whether the value is a known member of the AlertEntitiesFilterRemediationStatus enum.
 func (e AlertEntitiesFilterRemediationStatus) Valid() bool {
 	switch e {
-	case Done:
+	case AlertEntitiesFilterRemediationStatusDone:
 		return true
-	case Failed:
+	case AlertEntitiesFilterRemediationStatusFailed:
 		return true
-	case Pending:
+	case AlertEntitiesFilterRemediationStatusPending:
 		return true
 	default:
 		return false
@@ -39,16 +39,109 @@ func (e AlertEntitiesFilterRemediationStatus) Valid() bool {
 
 // Defines values for AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection.
 const (
-	Asc  AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "asc"
-	Desc AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "desc"
+	AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionAsc  AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "asc"
+	AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionDesc AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection = "desc"
 )
 
 // Valid indicates whether the value is a known member of the AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection enum.
 func (e AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection) Valid() bool {
 	switch e {
-	case Asc:
+	case AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionAsc:
 		return true
-	case Desc:
+	case AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstructionsServiceAppExistsConditionOperator.
+const (
+	InstructionsServiceAppExistsConditionOperatorEq  InstructionsServiceAppExistsConditionOperator = "eq"
+	InstructionsServiceAppExistsConditionOperatorGt  InstructionsServiceAppExistsConditionOperator = "gt"
+	InstructionsServiceAppExistsConditionOperatorGte InstructionsServiceAppExistsConditionOperator = "gte"
+	InstructionsServiceAppExistsConditionOperatorLt  InstructionsServiceAppExistsConditionOperator = "lt"
+	InstructionsServiceAppExistsConditionOperatorLte InstructionsServiceAppExistsConditionOperator = "lte"
+)
+
+// Valid indicates whether the value is a known member of the InstructionsServiceAppExistsConditionOperator enum.
+func (e InstructionsServiceAppExistsConditionOperator) Valid() bool {
+	switch e {
+	case InstructionsServiceAppExistsConditionOperatorEq:
+		return true
+	case InstructionsServiceAppExistsConditionOperatorGt:
+		return true
+	case InstructionsServiceAppExistsConditionOperatorGte:
+		return true
+	case InstructionsServiceAppExistsConditionOperatorLt:
+		return true
+	case InstructionsServiceAppExistsConditionOperatorLte:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstructionsServiceOsVersionConditionOperator.
+const (
+	InstructionsServiceOsVersionConditionOperatorEq  InstructionsServiceOsVersionConditionOperator = "eq"
+	InstructionsServiceOsVersionConditionOperatorGt  InstructionsServiceOsVersionConditionOperator = "gt"
+	InstructionsServiceOsVersionConditionOperatorGte InstructionsServiceOsVersionConditionOperator = "gte"
+	InstructionsServiceOsVersionConditionOperatorLt  InstructionsServiceOsVersionConditionOperator = "lt"
+	InstructionsServiceOsVersionConditionOperatorLte InstructionsServiceOsVersionConditionOperator = "lte"
+)
+
+// Valid indicates whether the value is a known member of the InstructionsServiceOsVersionConditionOperator enum.
+func (e InstructionsServiceOsVersionConditionOperator) Valid() bool {
+	switch e {
+	case InstructionsServiceOsVersionConditionOperatorEq:
+		return true
+	case InstructionsServiceOsVersionConditionOperatorGt:
+		return true
+	case InstructionsServiceOsVersionConditionOperatorGte:
+		return true
+	case InstructionsServiceOsVersionConditionOperatorLt:
+		return true
+	case InstructionsServiceOsVersionConditionOperatorLte:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstructionsServiceProfileAddigyPayloadType.
+const (
+	ComAddigyPolicySmartSoftwarePppcComAddigyPppc                                  InstructionsServiceProfileAddigyPayloadType = "com.addigy.policy.smart-software.pppc.com.addigy.pppc"
+	ComAddigyPolicySmartSoftwareServicemanagementComAppleServicemanagement         InstructionsServiceProfileAddigyPayloadType = "com.addigy.policy.smart-software.servicemanagement.com.apple.servicemanagement"
+	ComAddigyPolicySmartSoftwareSystemExtensionPolicyComAppleSystemExtensionPolicy InstructionsServiceProfileAddigyPayloadType = "com.addigy.policy.smart-software.system-extension-policy.com.apple.system-extension-policy"
+)
+
+// Valid indicates whether the value is a known member of the InstructionsServiceProfileAddigyPayloadType enum.
+func (e InstructionsServiceProfileAddigyPayloadType) Valid() bool {
+	switch e {
+	case ComAddigyPolicySmartSoftwarePppcComAddigyPppc:
+		return true
+	case ComAddigyPolicySmartSoftwareServicemanagementComAppleServicemanagement:
+		return true
+	case ComAddigyPolicySmartSoftwareSystemExtensionPolicyComAppleSystemExtensionPolicy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstructionsServiceSoftwareIconRequestProvider.
+const (
+	CloudStorage InstructionsServiceSoftwareIconRequestProvider = "cloud-storage"
+	Web          InstructionsServiceSoftwareIconRequestProvider = "web"
+)
+
+// Valid indicates whether the value is a known member of the InstructionsServiceSoftwareIconRequestProvider enum.
+func (e InstructionsServiceSoftwareIconRequestProvider) Valid() bool {
+	switch e {
+	case CloudStorage:
+		return true
+	case Web:
 		return true
 	default:
 		return false
@@ -67,6 +160,60 @@ func (e PolicyServicePrebuiltAppSettingsPromptIntervalHours) Valid() bool {
 	case N4:
 		return true
 	case N8:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SmartSoftwareSmartSoftwareQueryRequestSortDirection.
+const (
+	SmartSoftwareSmartSoftwareQueryRequestSortDirectionAsc  SmartSoftwareSmartSoftwareQueryRequestSortDirection = "asc"
+	SmartSoftwareSmartSoftwareQueryRequestSortDirectionDesc SmartSoftwareSmartSoftwareQueryRequestSortDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the SmartSoftwareSmartSoftwareQueryRequestSortDirection enum.
+func (e SmartSoftwareSmartSoftwareQueryRequestSortDirection) Valid() bool {
+	switch e {
+	case SmartSoftwareSmartSoftwareQueryRequestSortDirectionAsc:
+		return true
+	case SmartSoftwareSmartSoftwareQueryRequestSortDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped.
+const (
+	SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFailed   SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped = "failed"
+	SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFinished SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped = "finished"
+)
+
+// Valid indicates whether the value is a known member of the SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped enum.
+func (e SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped) Valid() bool {
+	switch e {
+	case SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFailed:
+		return true
+	case SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFinished:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped.
+const (
+	CreateSmartSoftwareNewVersionJSONBodyStatusOnSkippedFailed   CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped = "failed"
+	CreateSmartSoftwareNewVersionJSONBodyStatusOnSkippedFinished CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped = "finished"
+)
+
+// Valid indicates whether the value is a known member of the CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped enum.
+func (e CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped) Valid() bool {
+	switch e {
+	case CreateSmartSoftwareNewVersionJSONBodyStatusOnSkippedFailed:
+		return true
+	case CreateSmartSoftwareNewVersionJSONBodyStatusOnSkippedFinished:
 		return true
 	default:
 		return false
@@ -424,6 +571,34 @@ type EventsServiceListEventsPublicResponse struct {
 	Took        *int                             `json:"took,omitempty"`
 }
 
+// FileManagerServiceOrganizationFile defines model for file_manager_service.OrganizationFile.
+type FileManagerServiceOrganizationFile struct {
+	ContentType *string `json:"content_type,omitempty"`
+	Created     *string `json:"created,omitempty"`
+	Filename    *string `json:"filename,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	Md5Hash     *string `json:"md5_hash,omitempty"`
+	Orgid       *string `json:"orgid,omitempty"`
+	Provider    *string `json:"provider,omitempty"`
+	Size        *int    `json:"size,omitempty"`
+	UserEmail   *string `json:"user_email,omitempty"`
+}
+
+// FilesOrganizationFilesRequest defines model for files.OrganizationFilesRequest.
+type FilesOrganizationFilesRequest struct {
+	Ids     *[]string `json:"ids,omitempty"`
+	Md5Hash *[]string `json:"md5_hash,omitempty"`
+
+	// Page Example: 1
+	Page *int `json:"page,omitempty"`
+
+	// PerPage Example: 10
+	PerPage       *int    `json:"per_page,omitempty"`
+	SearchTerm    *string `json:"search_term,omitempty"`
+	SortDirection *string `json:"sort_direction,omitempty"`
+	SortField     *string `json:"sort_field,omitempty"`
+}
+
 // HomescreenLayoutsEntitiesIconItem defines model for homescreen_layouts_entities.IconItem.
 type HomescreenLayoutsEntitiesIconItem struct {
 	BundleId    *string                                `json:"bundle_id,omitempty"`
@@ -432,6 +607,321 @@ type HomescreenLayoutsEntitiesIconItem struct {
 	Type        *string                                `json:"type,omitempty"`
 	Url         *string                                `json:"url,omitempty"`
 }
+
+// InstructionsServiceAppExistsCondition defines model for instructions_service.AppExistsCondition.
+type InstructionsServiceAppExistsCondition struct {
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// InstallIfNotPresent Example: true
+	InstallIfNotPresent *bool `json:"install_if_not_present,omitempty"`
+
+	// Operator Example: eq
+	Operator *InstructionsServiceAppExistsConditionOperator `json:"operator,omitempty"`
+
+	// Path Example: /Applications/zoom.us.app
+	Path *string `json:"path,omitempty"`
+
+	// Version Example: 5.0.0
+	Version *string `json:"version,omitempty"`
+}
+
+// InstructionsServiceAppExistsConditionOperator Example: eq
+type InstructionsServiceAppExistsConditionOperator string
+
+// InstructionsServiceApplication defines model for instructions_service.Application.
+type InstructionsServiceApplication struct {
+	Bundle         *string `json:"bundle,omitempty"`
+	Custom         *bool   `json:"custom,omitempty"`
+	Identifier     *string `json:"identifier,omitempty"`
+	IdentifierType *string `json:"identifier_type,omitempty"`
+	Name           *string `json:"name,omitempty"`
+	Path           *string `json:"path,omitempty"`
+	Requirements   string  `json:"requirements"`
+	Signature      *string `json:"signature,omitempty"`
+}
+
+// InstructionsServiceCustomSoftware defines model for instructions_service.CustomSoftware.
+type InstructionsServiceCustomSoftware struct {
+	Archived                    *bool                                    `json:"archived,omitempty"`
+	BaseIdentifier              *string                                  `json:"base_identifier,omitempty"`
+	Category                    *string                                  `json:"category,omitempty"`
+	Condition                   *string                                  `json:"condition,omitempty"`
+	Description                 *string                                  `json:"description,omitempty"`
+	Downloads                   *[]InstructionsServiceDownload           `json:"downloads,omitempty"`
+	FactIdentifier              *string                                  `json:"fact_identifier,omitempty"`
+	Identifier                  *string                                  `json:"identifier,omitempty"`
+	Install                     *bool                                    `json:"install,omitempty"`
+	InstallationScript          *string                                  `json:"installation_script,omitempty"`
+	InstructionId               *string                                  `json:"instruction_id,omitempty"`
+	IsOnboardingConfig          *bool                                    `json:"is_onboarding_config,omitempty"`
+	Label                       *string                                  `json:"label,omitempty"`
+	Name                        *string                                  `json:"name,omitempty"`
+	OrganizationId              *string                                  `json:"organization_id,omitempty"`
+	OsType                      *string                                  `json:"os_type,omitempty"`
+	PolicyRestricted            *bool                                    `json:"policy_restricted,omitempty"`
+	PredefinedConditions        *InstructionsServicePredefinedConditions `json:"predefined_conditions,omitempty"`
+	PricePerDevice              *float32                                 `json:"price_per_device,omitempty"`
+	Priority                    *float32                                 `json:"priority,omitempty"`
+	Profiles                    *[]InstructionsServiceProfile            `json:"profiles,omitempty"`
+	Provider                    *string                                  `json:"provider,omitempty"`
+	Public                      *bool                                    `json:"public,omitempty"`
+	PublicSoftwareInstructionId *string                                  `json:"public_software_instruction_id,omitempty"`
+	RemoveScript                *string                                  `json:"remove_script,omitempty"`
+	RunOnSuccess                *bool                                    `json:"run_on_success,omitempty"`
+	SetGroupName                *bool                                    `json:"set_group_name,omitempty"`
+	SoftwareIcon                *InstructionsServiceDownload             `json:"software_icon,omitempty"`
+	StatusOnSkipped             *string                                  `json:"status_on_skipped,omitempty"`
+	TccVersion                  *int                                     `json:"tcc_version,omitempty"`
+	Type                        *string                                  `json:"type,omitempty"`
+	UserEmail                   *string                                  `json:"user_email,omitempty"`
+	Version                     interface{}                              `json:"version,omitempty"`
+}
+
+// InstructionsServiceDownload defines model for instructions_service.Download.
+type InstructionsServiceDownload struct {
+	// ContentType Example: application/octet-stream
+	ContentType *string `json:"content_type,omitempty"`
+
+	// Created Example: 2021-01-01T00:00:00Z
+	Created *string `json:"created,omitempty"`
+
+	// FilePath Example: https://example.com/path/to/zoom.pkg
+	FilePath *string `json:"file_path,omitempty"`
+
+	// Filename Example: zoom.pkg
+	Filename *string `json:"filename,omitempty"`
+
+	// Id Example: 5f3e3e3e3e3e3e3e3e3e3e3e3
+	Id *string `json:"id,omitempty"`
+
+	// Md5Hash Example: 5f3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e
+	Md5Hash *string `json:"md5_hash,omitempty"`
+
+	// Provider Example: web
+	Provider *string `json:"provider,omitempty"`
+
+	// Size Example: 1337
+	Size *int `json:"size,omitempty"`
+
+	// UserEmail Example: email@addigy.com
+	UserEmail *string `json:"user_email,omitempty"`
+}
+
+// InstructionsServiceExamplePPPCPermissions defines model for instructions_service.ExamplePPPCPermissions.
+type InstructionsServiceExamplePPPCPermissions struct {
+	// Accessibility Example: Allow
+	Accessibility *string `json:"Accessibility,omitempty"`
+
+	// AddressBook Example: Allow
+	AddressBook *string `json:"AddressBook,omitempty"`
+
+	// Calendar Example: Allow
+	Calendar *string `json:"Calendar,omitempty"`
+
+	// Camera Example: Prompt
+	Camera *string `json:"Camera,omitempty"`
+
+	// FileProviderPresence Example: Allow
+	FileProviderPresence *string `json:"FileProviderPresence,omitempty"`
+
+	// ListenEvent Example: Prompt
+	ListenEvent *string `json:"ListenEvent,omitempty"`
+
+	// MediaLibrary Example: Allow
+	MediaLibrary *string `json:"MediaLibrary,omitempty"`
+
+	// Microphone Example: Prompt
+	Microphone *string `json:"Microphone,omitempty"`
+
+	// Photos Example: Allow
+	Photos *string `json:"Photos,omitempty"`
+
+	// PostEvent Example: Allow
+	PostEvent *string `json:"PostEvent,omitempty"`
+
+	// Reminders Example: Allow
+	Reminders *string `json:"Reminders,omitempty"`
+
+	// ScreenCapture Example: Prompt
+	ScreenCapture *string `json:"ScreenCapture,omitempty"`
+
+	// SpeechRecognition Example: Allow
+	SpeechRecognition *string `json:"SpeechRecognition,omitempty"`
+
+	// SystemPolicyAllFiles Example: Allow
+	SystemPolicyAllFiles *string `json:"SystemPolicyAllFiles,omitempty"`
+
+	// SystemPolicyDesktopFolder Example: Allow
+	SystemPolicyDesktopFolder *string `json:"SystemPolicyDesktopFolder,omitempty"`
+
+	// SystemPolicyDocumentsFolder Example: Allow
+	SystemPolicyDocumentsFolder *string `json:"SystemPolicyDocumentsFolder,omitempty"`
+
+	// SystemPolicyDownloadsFolder Example: Allow
+	SystemPolicyDownloadsFolder *string `json:"SystemPolicyDownloadsFolder,omitempty"`
+
+	// SystemPolicyNetworkVolumes Example: Allow
+	SystemPolicyNetworkVolumes *string `json:"SystemPolicyNetworkVolumes,omitempty"`
+
+	// SystemPolicyRemovableVolumes Example: Allow
+	SystemPolicyRemovableVolumes *string `json:"SystemPolicyRemovableVolumes,omitempty"`
+
+	// SystemPolicySysAdminFiles Example: Allow
+	SystemPolicySysAdminFiles *string `json:"SystemPolicySysAdminFiles,omitempty"`
+}
+
+// InstructionsServiceExamplePPPCProfile defines model for instructions_service.ExamplePPPCProfile.
+type InstructionsServiceExamplePPPCProfile struct {
+	// AddigyPayloadType Example: com.addigy.policy.smart-software.pppc.com.addigy.pppc
+	AddigyPayloadType *string `json:"addigy_payload_type,omitempty"`
+
+	// Bundle Example: us.zoom.xos
+	Bundle *string `json:"bundle,omitempty"`
+
+	// Custom Example: false
+	Custom *bool `json:"custom,omitempty"`
+
+	// Event Example: [""]
+	Event *[]string `json:"event,omitempty"`
+
+	// FileId Example:
+	FileId *string `json:"file_id,omitempty"`
+
+	// Identifier Example: us.zoom.xos
+	Identifier *string `json:"identifier,omitempty"`
+
+	// IdentifierType Example: bundleID
+	IdentifierType *string `json:"identifier_type,omitempty"`
+
+	// Name Example: zoom.us
+	Name *string `json:"name,omitempty"`
+
+	// Path Example:
+	Path        *string                                    `json:"path,omitempty"`
+	Permissions *InstructionsServiceExamplePPPCPermissions `json:"permissions,omitempty"`
+
+	// Requirements Example: identifier "us.zoom.xos" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "BJ4HAAB9B3"
+	Requirements *string `json:"requirements,omitempty"`
+
+	// Signature Example: identifier "us.zoom.xos" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "BJ4HAAB9B3"
+	Signature *string `json:"signature,omitempty"`
+}
+
+// InstructionsServiceFileExistenceCondition defines model for instructions_service.FileExistenceCondition.
+type InstructionsServiceFileExistenceCondition struct {
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Path Example: /Applications/zoom.us.app.file
+	Path *string `json:"path,omitempty"`
+}
+
+// InstructionsServiceOsVersionCondition defines model for instructions_service.OsVersionCondition.
+type InstructionsServiceOsVersionCondition struct {
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Operator Example: gte
+	Operator *InstructionsServiceOsVersionConditionOperator `json:"operator,omitempty"`
+
+	// Version Example: 10.15.7
+	Version *string `json:"version,omitempty"`
+}
+
+// InstructionsServiceOsVersionConditionOperator Example: gte
+type InstructionsServiceOsVersionConditionOperator string
+
+// InstructionsServicePredefinedConditions defines model for instructions_service.PredefinedConditions.
+type InstructionsServicePredefinedConditions struct {
+	AppExists            *InstructionsServiceAppExistsCondition            `json:"app_exists,omitempty"`
+	FileExists           *InstructionsServiceFileExistenceCondition        `json:"file_exists,omitempty"`
+	FileNotExists        *InstructionsServiceFileExistenceCondition        `json:"file_not_exists,omitempty"`
+	OsVersion            *InstructionsServiceOsVersionCondition            `json:"os_version,omitempty"`
+	ProcessNotRunning    *InstructionsServiceProcessNotRunningCondition    `json:"process_not_running,omitempty"`
+	ProfileExists        *InstructionsServiceProfileExistsCondition        `json:"profile_exists,omitempty"`
+	RequiredArchitecture *InstructionsServiceRequiredArchitectureCondition `json:"required_architecture,omitempty"`
+}
+
+// InstructionsServiceProcessNotRunningCondition defines model for instructions_service.ProcessNotRunningCondition.
+type InstructionsServiceProcessNotRunningCondition struct {
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// ProcessName Example: zoom.us
+	ProcessName *string `json:"process_name,omitempty"`
+}
+
+// InstructionsServiceProfile defines model for instructions_service.Profile.
+type InstructionsServiceProfile struct {
+	AddigyPayloadType            *InstructionsServiceProfileAddigyPayloadType `json:"addigy_payload_type,omitempty"`
+	AllowUserOverrides           *bool                                        `json:"allow_user_overrides,omitempty"`
+	AllowedSystemExtensions      *map[string][]string                         `json:"allowed_system_extensions,omitempty"`
+	AllowedSystemExtensionsTypes *map[string][]string                         `json:"allowed_system_extensions_types,omitempty"`
+	AllowedTeamIdentifiers       *[]string                                    `json:"allowed_team_identifiers,omitempty"`
+	Bundle                       *string                                      `json:"bundle,omitempty"`
+	Custom                       *bool                                        `json:"custom,omitempty"`
+	Events                       *[]InstructionsServiceProfileEvent           `json:"events,omitempty"`
+	FileId                       *string                                      `json:"file_id,omitempty"`
+	Identifier                   *string                                      `json:"identifier,omitempty"`
+	IdentifierType               *string                                      `json:"identifier_type,omitempty"`
+	Name                         *string                                      `json:"name,omitempty"`
+	Path                         *string                                      `json:"path,omitempty"`
+	Permissions                  *InstructionsServiceProfilePermissions       `json:"permissions,omitempty"`
+	RemovableSystemExtensions    *map[string][]string                         `json:"removable_system_extensions,omitempty"`
+	Requirements                 string                                       `json:"requirements"`
+	Rules                        *[]InstructionsServiceServiceManagementRule  `json:"rules,omitempty"`
+	Signature                    *string                                      `json:"signature,omitempty"`
+}
+
+// InstructionsServiceProfileAddigyPayloadType defines model for InstructionsServiceProfile.AddigyPayloadType.
+type InstructionsServiceProfileAddigyPayloadType string
+
+// InstructionsServiceProfileEvent defines model for instructions_service.ProfileEvent.
+type InstructionsServiceProfileEvent struct {
+	Application *InstructionsServiceApplication `json:"application,omitempty"`
+	Permission  *string                         `json:"permission,omitempty"`
+}
+
+// InstructionsServiceProfileExistsCondition defines model for instructions_service.ProfileExistsCondition.
+type InstructionsServiceProfileExistsCondition struct {
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// ProfileId Example: com.addigy.example.profile
+	ProfileId *string `json:"profile_id,omitempty"`
+}
+
+// InstructionsServiceProfilePermissions defines model for instructions_service.ProfilePermissions.
+type InstructionsServiceProfilePermissions map[string]string
+
+// InstructionsServiceRequiredArchitectureCondition defines model for instructions_service.RequiredArchitectureCondition.
+type InstructionsServiceRequiredArchitectureCondition struct {
+	// AppleSilicon Example: true
+	AppleSilicon *bool `json:"apple_silicon,omitempty"`
+
+	// Enabled Example: true
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// InstructionsServiceServiceManagementRule defines model for instructions_service.ServiceManagementRule.
+type InstructionsServiceServiceManagementRule struct {
+	Comment   *string `json:"comment,omitempty"`
+	RuleType  *string `json:"rule_type,omitempty"`
+	RuleValue *string `json:"rule_value,omitempty"`
+}
+
+// InstructionsServiceSoftwareIconRequest defines model for instructions_service.SoftwareIconRequest.
+type InstructionsServiceSoftwareIconRequest struct {
+	// Id Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	Id *string `json:"id,omitempty"`
+
+	// Provider Example: cloud-storage
+	Provider *InstructionsServiceSoftwareIconRequestProvider `json:"provider,omitempty"`
+}
+
+// InstructionsServiceSoftwareIconRequestProvider Example: cloud-storage
+type InstructionsServiceSoftwareIconRequestProvider string
 
 // MdmConfigurationsColumn defines model for mdm_configurations.Column.
 type MdmConfigurationsColumn struct {
@@ -647,11 +1137,158 @@ type ResponseEntitiesMetadata struct {
 	Total *int `json:"total,omitempty"`
 }
 
+// ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile defines model for response_entities.PaginatedResponse-file_manager_service_OrganizationFile.
+type ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile struct {
+	Items    *[]FileManagerServiceOrganizationFile `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata             `json:"metadata,omitempty"`
+}
+
+// ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware defines model for response_entities.PaginatedResponse-instructions_service_CustomSoftware.
+type ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware struct {
+	Items    *[]InstructionsServiceCustomSoftware `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata            `json:"metadata,omitempty"`
+}
+
 // ResponseEntitiesResponse defines model for response_entities.Response.
 type ResponseEntitiesResponse struct {
 	Items    interface{}               `json:"items,omitempty"`
 	Metadata *ResponseEntitiesMetadata `json:"metadata,omitempty"`
 }
+
+// SmartSoftwareDownload defines model for smart_software.Download.
+type SmartSoftwareDownload struct {
+	// Id Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	Id *string `json:"id,omitempty"`
+}
+
+// SmartSoftwareFilter defines model for smart_software.Filter.
+type SmartSoftwareFilter struct {
+	// Archived Example: false
+	Archived *bool `json:"archived,omitempty"`
+
+	// ExcludedIds Example: ["1234-1234-1234-1234"]
+	ExcludedIds *[]string `json:"excluded_ids,omitempty"`
+
+	// Identifier Example: Smart Software-1234-1234-1234-1234
+	Identifier *string `json:"identifier,omitempty"`
+
+	// Ids Example: ["1234-1234-1234-1234"]
+	Ids *[]string `json:"ids,omitempty"`
+
+	// NameContains Example: Smart
+	NameContains *string `json:"name_contains,omitempty"`
+}
+
+// SmartSoftwareSmartSoftwareQueryRequest defines model for smart_software.SmartSoftwareQueryRequest.
+type SmartSoftwareSmartSoftwareQueryRequest struct {
+	// Page Example: 1
+	Page int `json:"page"`
+
+	// PerPage Example: 10
+	PerPage int                  `json:"per_page"`
+	Query   *SmartSoftwareFilter `json:"query,omitempty"`
+
+	// SortDirection Example: asc
+	SortDirection SmartSoftwareSmartSoftwareQueryRequestSortDirection `json:"sort_direction"`
+
+	// SortField Example: name
+	SortField string `json:"sort_field"`
+}
+
+// SmartSoftwareSmartSoftwareQueryRequestSortDirection Example: asc
+type SmartSoftwareSmartSoftwareQueryRequestSortDirection string
+
+// SmartSoftwareUpdateSmartSoftwareRequest defines model for smart_software.UpdateSmartSoftwareRequest.
+type SmartSoftwareUpdateSmartSoftwareRequest struct {
+	// Archived Example: false
+	Archived *bool `json:"archived,omitempty"`
+
+	// BaseIdentifier Example: zoom.us
+	BaseIdentifier *string `json:"base_identifier,omitempty"`
+
+	// Category Example: Productivity
+	Category *string `json:"category,omitempty"`
+
+	// Condition Example: ls /Applications/zoom.us.app
+	Condition *string `json:"condition,omitempty"`
+
+	// Description Example: Zoom is a video conferencing software
+	Description    *string                  `json:"description,omitempty"`
+	Downloads      *[]SmartSoftwareDownload `json:"downloads,omitempty"`
+	FactIdentifier *string                  `json:"fact_identifier,omitempty"`
+
+	// Identifier Example: Zoom
+	Identifier *string `json:"identifier,omitempty"`
+
+	// Install Example: true
+	Install *bool `json:"install,omitempty"`
+
+	// InstallationScript Example: /bin/installer -pkg /path/to/zoom.pkg -target /
+	InstallationScript *string `json:"installation_script,omitempty"`
+
+	// InstructionId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	InstructionId *string `json:"instruction_id,omitempty"`
+
+	// IsOnboardingConfig Example: false
+	IsOnboardingConfig *bool `json:"is_onboarding_config,omitempty"`
+
+	// Label Example: Smart Software
+	Label *string `json:"label,omitempty"`
+
+	// Name Example: Zoom
+	Name *string `json:"name,omitempty"`
+
+	// OrganizationId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	OrganizationId *string `json:"organization_id,omitempty"`
+
+	// PolicyRestricted Example: false
+	PolicyRestricted     *bool                                    `json:"policy_restricted,omitempty"`
+	PredefinedConditions *InstructionsServicePredefinedConditions `json:"predefined_conditions,omitempty"`
+
+	// PricePerDevice Example: 0
+	PricePerDevice *float32 `json:"price_per_device,omitempty"`
+
+	// Priority Example: 10
+	Priority *float32                      `json:"priority,omitempty"`
+	Profiles *[]InstructionsServiceProfile `json:"profiles,omitempty"`
+
+	// Provider Example: custom
+	Provider *string `json:"provider,omitempty"`
+
+	// Public Example: false
+	Public *bool `json:"public,omitempty"`
+
+	// PublicSoftwareInstructionId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	PublicSoftwareInstructionId *string `json:"public_software_instruction_id,omitempty"`
+
+	// RemoveScript Example: rm -rf /Applications/zoom.us.app
+	RemoveScript *string `json:"remove_script,omitempty"`
+
+	// RunOnSuccess Example: true
+	RunOnSuccess *bool `json:"run_on_success,omitempty"`
+
+	// SetGroupName Example: false
+	SetGroupName *bool                                   `json:"set_group_name,omitempty"`
+	SoftwareIcon *InstructionsServiceSoftwareIconRequest `json:"software_icon,omitempty"`
+
+	// StatusOnSkipped Example: finished
+	StatusOnSkipped *SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped `json:"status_on_skipped,omitempty"`
+
+	// TccVersion Example: 1
+	TccVersion *int `json:"tcc_version,omitempty"`
+
+	// Type Example: custom
+	Type *string `json:"type,omitempty"`
+
+	// UserEmail Example: email@example.com
+	UserEmail *string `json:"user_email,omitempty"`
+
+	// Version Example: 1.0
+	Version *string `json:"version,omitempty"`
+}
+
+// SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped Example: finished
+type SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped string
 
 // SystemEventsSearchRequestQuery defines model for system_events.searchRequestQuery.
 type SystemEventsSearchRequestQuery struct {
@@ -674,20 +1311,121 @@ type SystemEventsSearchRequestQuery struct {
 	ToDateTime *string `json:"to_date_time,omitempty"`
 }
 
+// CreateSmartSoftwareNewVersionJSONBody defines parameters for CreateSmartSoftwareNewVersion.
+type CreateSmartSoftwareNewVersionJSONBody struct {
+	// Archived Example: false
+	Archived *bool `json:"archived,omitempty"`
+
+	// BaseIdentifier Example: zoom.us
+	BaseIdentifier *string `json:"base_identifier,omitempty"`
+
+	// Category Example: Productivity
+	Category *string `json:"category,omitempty"`
+
+	// Condition Example: ls /Applications/zoom.us.app
+	Condition *string `json:"condition,omitempty"`
+
+	// Description Example: Zoom is a video conferencing software
+	Description    *string                  `json:"description,omitempty"`
+	Downloads      *[]SmartSoftwareDownload `json:"downloads,omitempty"`
+	FactIdentifier *string                  `json:"fact_identifier,omitempty"`
+
+	// Identifier Example: Zoom
+	Identifier *string `json:"identifier,omitempty"`
+
+	// Install Example: true
+	Install *bool `json:"install,omitempty"`
+
+	// InstallationScript Example: /bin/installer -pkg /path/to/zoom.pkg -target /
+	InstallationScript *string `json:"installation_script,omitempty"`
+
+	// InstructionId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	InstructionId *string `json:"instruction_id,omitempty"`
+
+	// IsOnboardingConfig Example: false
+	IsOnboardingConfig *bool `json:"is_onboarding_config,omitempty"`
+
+	// Label Example: Smart Software
+	Label *string `json:"label,omitempty"`
+
+	// Name Example: Zoom
+	Name *string `json:"name,omitempty"`
+
+	// OrganizationId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	OrganizationId *string `json:"organization_id,omitempty"`
+
+	// PolicyRestricted Example: false
+	PolicyRestricted     *bool                                    `json:"policy_restricted,omitempty"`
+	PredefinedConditions *InstructionsServicePredefinedConditions `json:"predefined_conditions,omitempty"`
+
+	// PricePerDevice Example: 0
+	PricePerDevice *float32 `json:"price_per_device,omitempty"`
+
+	// Priority Example: 10
+	Priority *float32                                 `json:"priority,omitempty"`
+	Profiles *[]InstructionsServiceExamplePPPCProfile `json:"profiles,omitempty"`
+
+	// Provider Example: custom
+	Provider *string `json:"provider,omitempty"`
+
+	// Public Example: false
+	Public *bool `json:"public,omitempty"`
+
+	// PublicSoftwareInstructionId Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
+	PublicSoftwareInstructionId *string `json:"public_software_instruction_id,omitempty"`
+
+	// RemoveScript Example: rm -rf /Applications/zoom.us.app
+	RemoveScript *string `json:"remove_script,omitempty"`
+
+	// RunOnSuccess Example: true
+	RunOnSuccess *bool `json:"run_on_success,omitempty"`
+
+	// SetGroupName Example: false
+	SetGroupName *bool                                   `json:"set_group_name,omitempty"`
+	SoftwareIcon *InstructionsServiceSoftwareIconRequest `json:"software_icon,omitempty"`
+
+	// StatusOnSkipped Example: finished
+	StatusOnSkipped *CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped `json:"status_on_skipped,omitempty"`
+
+	// TccVersion Example: 1
+	TccVersion *int `json:"tcc_version,omitempty"`
+
+	// Type Example: custom
+	Type *string `json:"type,omitempty"`
+
+	// UserEmail Example: email@example.com
+	UserEmail *string `json:"user_email,omitempty"`
+
+	// Version Example: 1.0
+	Version *string `json:"version,omitempty"`
+}
+
+// CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped defines parameters for CreateSmartSoftwareNewVersion.
+type CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped string
+
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
 type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
 
 // GetSystemEventsJSONRequestBody defines body for GetSystemEvents for application/json ContentType.
 type GetSystemEventsJSONRequestBody = SystemEventsSearchRequestQuery
 
+// CreateSmartSoftwareNewVersionJSONRequestBody defines body for CreateSmartSoftwareNewVersion for application/json ContentType.
+type CreateSmartSoftwareNewVersionJSONRequestBody CreateSmartSoftwareNewVersionJSONBody
+
 // GetAdeTokensJSONRequestBody defines body for GetAdeTokens for application/json ContentType.
 type GetAdeTokensJSONRequestBody = AdeAutomaticEnrollmentRequest
+
+// GetOrganizationFilesJSONRequestBody defines body for GetOrganizationFiles for application/json ContentType.
+type GetOrganizationFilesJSONRequestBody = FilesOrganizationFilesRequest
 
 // GetReceivedAlertsByFilterJSONRequestBody defines body for GetReceivedAlertsByFilter for application/json ContentType.
 type GetReceivedAlertsByFilterJSONRequestBody = AlertEntitiesPaginatedReceivedAlertsRequestQuery
 
 // GetPoliciesJSONRequestBody defines body for GetPolicies for application/json ContentType.
 type GetPoliciesJSONRequestBody = PolicyQueryRequest
+
+// GetSmartSoftwareItemsJSONRequestBody defines body for GetSmartSoftwareItems for application/json ContentType.
+type GetSmartSoftwareItemsJSONRequestBody = SmartSoftwareSmartSoftwareQueryRequest
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -814,6 +1552,31 @@ type ClientInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetSmartSoftware Gets a smart software item.
+	//
+	// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Corresponds with GET /o/{organization_id}/smart-software/{id} (the `GetSmartSoftware` operationId).
+	GetSmartSoftware(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSmartSoftwareNewVersionWithBody Creates a new version of a smart software.
+	//
+	// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+	CreateSmartSoftwareNewVersionWithBody(ctx context.Context, organizationId string, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSmartSoftwareNewVersion Creates a new version of a smart software.
+	//
+	// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+	CreateSmartSoftwareNewVersion(ctx context.Context, organizationId string, id string, body CreateSmartSoftwareNewVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetAdeTokensWithBody Get a list of ade tokens assigned to policies.
 	//
 	// Takes any type of body and a specified content type.
@@ -827,6 +1590,31 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 	GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganizationFilesWithBody Get a list of organization files.
+	//
+	// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+	GetOrganizationFilesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganizationFiles Get a list of organization files.
+	//
+	// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+	GetOrganizationFiles(ctx context.Context, body GetOrganizationFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganizationFile Get file metadata.
+	//
+	// Get a file's metadata by id. <br><b>Permission Required:</b> View Files.
+	//
+	// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
+	GetOrganizationFile(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetReceivedAlertsByFilterWithBody Get received alerts matching a filter.
 	//
@@ -863,6 +1651,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /oa/policies/query (the `GetPolicies` operationId).
 	GetPolicies(ctx context.Context, body GetPoliciesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSmartSoftwareItemsWithBody Gets a list of smart software items.
+	//
+	// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+	GetSmartSoftwareItemsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSmartSoftwareItems Gets a list of smart software items.
+	//
+	// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+	GetSmartSoftwareItems(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // GetDevicesWithBody Universal Search Devices
@@ -976,6 +1782,61 @@ func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, r
 	return c.Client.Do(req)
 }
 
+// GetSmartSoftware Gets a smart software item.
+//
+// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Corresponds with GET /o/{organization_id}/smart-software/{id} (the `GetSmartSoftware` operationId).
+func (c *Client) GetSmartSoftware(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSmartSoftwareRequest(c.Server, organizationId, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSmartSoftwareNewVersionWithBody Creates a new version of a smart software.
+//
+// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+func (c *Client) CreateSmartSoftwareNewVersionWithBody(ctx context.Context, organizationId string, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSmartSoftwareNewVersionRequestWithBody(c.Server, organizationId, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSmartSoftwareNewVersion Creates a new version of a smart software.
+//
+// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+func (c *Client) CreateSmartSoftwareNewVersion(ctx context.Context, organizationId string, id string, body CreateSmartSoftwareNewVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSmartSoftwareNewVersionRequest(c.Server, organizationId, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetAdeTokensWithBody Get a list of ade tokens assigned to policies.
 //
 // Takes any type of body and a specified content type.
@@ -1000,6 +1861,61 @@ func (c *Client) GetAdeTokensWithBody(ctx context.Context, contentType string, b
 // Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 func (c *Client) GetAdeTokens(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAdeTokensRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganizationFilesWithBody Get a list of organization files.
+//
+// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+func (c *Client) GetOrganizationFilesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationFilesRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganizationFiles Get a list of organization files.
+//
+// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+func (c *Client) GetOrganizationFiles(ctx context.Context, body GetOrganizationFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationFilesRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganizationFile Get file metadata.
+//
+// Get a file's metadata by id. <br><b>Permission Required:</b> View Files.
+//
+// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
+func (c *Client) GetOrganizationFile(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationFileRequest(c.Server, fileId)
 	if err != nil {
 		return nil, err
 	}
@@ -1076,6 +1992,44 @@ func (c *Client) GetPoliciesWithBody(ctx context.Context, contentType string, bo
 // Corresponds with POST /oa/policies/query (the `GetPolicies` operationId).
 func (c *Client) GetPolicies(ctx context.Context, body GetPoliciesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPoliciesRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSmartSoftwareItemsWithBody Gets a list of smart software items.
+//
+// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+func (c *Client) GetSmartSoftwareItemsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSmartSoftwareItemsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSmartSoftwareItems Gets a list of smart software items.
+//
+// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+func (c *Client) GetSmartSoftwareItems(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSmartSoftwareItemsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1241,6 +2195,101 @@ func NewGetAvailableFactsRequest(server string, organizationId string) (*http.Re
 	return req, nil
 }
 
+// NewGetSmartSoftwareRequest constructs an http.Request for the GetSmartSoftware method
+func NewGetSmartSoftwareRequest(server string, organizationId string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/smart-software/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateSmartSoftwareNewVersionRequest calls the generic CreateSmartSoftwareNewVersion builder with application/json body
+func NewCreateSmartSoftwareNewVersionRequest(server string, organizationId string, id string, body CreateSmartSoftwareNewVersionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSmartSoftwareNewVersionRequestWithBody(server, organizationId, id, "application/json", bodyReader)
+}
+
+// NewCreateSmartSoftwareNewVersionRequestWithBody constructs an http.Request for the CreateSmartSoftwareNewVersion method, with any body, and a specified content type
+func NewCreateSmartSoftwareNewVersionRequestWithBody(server string, organizationId string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/smart-software/%s/new-version", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetAdeTokensRequest calls the generic GetAdeTokens builder with application/json body
 func NewGetAdeTokensRequest(server string, body GetAdeTokensJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -1277,6 +2326,80 @@ func NewGetAdeTokensRequestWithBody(server string, contentType string, body io.R
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetOrganizationFilesRequest calls the generic GetOrganizationFiles builder with application/json body
+func NewGetOrganizationFilesRequest(server string, body GetOrganizationFilesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetOrganizationFilesRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetOrganizationFilesRequestWithBody constructs an http.Request for the GetOrganizationFiles method, with any body, and a specified content type
+func NewGetOrganizationFilesRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/files/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetOrganizationFileRequest constructs an http.Request for the GetOrganizationFile method
+func NewGetOrganizationFileRequest(server string, fileId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "file_id", fileId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/files/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -1342,6 +2465,46 @@ func NewGetPoliciesRequestWithBody(server string, contentType string, body io.Re
 	}
 
 	operationPath := fmt.Sprintf("/oa/policies/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSmartSoftwareItemsRequest calls the generic GetSmartSoftwareItems builder with application/json body
+func NewGetSmartSoftwareItemsRequest(server string, body GetSmartSoftwareItemsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetSmartSoftwareItemsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetSmartSoftwareItemsRequestWithBody constructs an http.Request for the GetSmartSoftwareItems method, with any body, and a specified content type
+func NewGetSmartSoftwareItemsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/smart-software/query")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1460,6 +2623,33 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFactsWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetAvailableFactsResponse, error)
 
+	// GetSmartSoftwareWithResponse Gets a smart software item.
+	//
+	// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /o/{organization_id}/smart-software/{id} (the `GetSmartSoftware` operationId).
+	GetSmartSoftwareWithResponse(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*GetSmartSoftwareResponse, error)
+
+	// CreateSmartSoftwareNewVersionWithBodyWithResponse Creates a new version of a smart software.
+	//
+	// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+	CreateSmartSoftwareNewVersionWithBodyWithResponse(ctx context.Context, organizationId string, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareNewVersionResponse, error)
+
+	// CreateSmartSoftwareNewVersionWithResponse Creates a new version of a smart software.
+	//
+	// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+	CreateSmartSoftwareNewVersionWithResponse(ctx context.Context, organizationId string, id string, body CreateSmartSoftwareNewVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareNewVersionResponse, error)
+
 	// GetAdeTokensWithBodyWithResponse Get a list of ade tokens assigned to policies.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -1473,6 +2663,33 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /oa/ade/tokens/policies/query (the `GetAdeTokens` operationId).
 	GetAdeTokensWithResponse(ctx context.Context, body GetAdeTokensJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAdeTokensResponse, error)
+
+	// GetOrganizationFilesWithBodyWithResponse Get a list of organization files.
+	//
+	// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+	GetOrganizationFilesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetOrganizationFilesResponse, error)
+
+	// GetOrganizationFilesWithResponse Get a list of organization files.
+	//
+	// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+	GetOrganizationFilesWithResponse(ctx context.Context, body GetOrganizationFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetOrganizationFilesResponse, error)
+
+	// GetOrganizationFileWithResponse Get file metadata.
+	//
+	// Get a file's metadata by id. <br><b>Permission Required:</b> View Files.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
+	GetOrganizationFileWithResponse(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*GetOrganizationFileResponse, error)
 
 	// GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
 	//
@@ -1509,6 +2726,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /oa/policies/query (the `GetPolicies` operationId).
 	GetPoliciesWithResponse(ctx context.Context, body GetPoliciesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetPoliciesResponse, error)
+
+	// GetSmartSoftwareItemsWithBodyWithResponse Gets a list of smart software items.
+	//
+	// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+	GetSmartSoftwareItemsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetSmartSoftwareItemsResponse, error)
+
+	// GetSmartSoftwareItemsWithResponse Gets a list of smart software items.
+	//
+	// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+	GetSmartSoftwareItemsWithResponse(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSmartSoftwareItemsResponse, error)
 }
 
 type GetDevicesResponse struct {
@@ -1717,6 +2952,130 @@ func (r GetAvailableFactsResponse) ContentType() string {
 	return ""
 }
 
+type GetSmartSoftwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InstructionsServiceCustomSoftware
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSmartSoftwareResponse) GetJSON200() *InstructionsServiceCustomSoftware {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSmartSoftwareResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSmartSoftwareResponse) GetJSON403() *ResponseEntitiesErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSmartSoftwareResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSmartSoftwareResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSmartSoftwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSmartSoftwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSmartSoftwareResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateSmartSoftwareNewVersionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InstructionsServiceCustomSoftware
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r CreateSmartSoftwareNewVersionResponse) GetJSON200() *InstructionsServiceCustomSoftware {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateSmartSoftwareNewVersionResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateSmartSoftwareNewVersionResponse) GetJSON403() *ResponseEntitiesErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateSmartSoftwareNewVersionResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSmartSoftwareNewVersionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSmartSoftwareNewVersionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSmartSoftwareNewVersionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSmartSoftwareNewVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetAdeTokensResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1759,6 +3118,123 @@ func (r GetAdeTokensResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAdeTokensResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOrganizationFilesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOrganizationFilesResponse) GetJSON200() *ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetOrganizationFilesResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetOrganizationFilesResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOrganizationFilesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOrganizationFilesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOrganizationFilesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOrganizationFilesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOrganizationFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FileManagerServiceOrganizationFile
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOrganizationFileResponse) GetJSON200() *FileManagerServiceOrganizationFile {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetOrganizationFileResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetOrganizationFileResponse) GetJSON404() *ResponseEntitiesErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetOrganizationFileResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOrganizationFileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOrganizationFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOrganizationFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOrganizationFileResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -1868,6 +3344,61 @@ func (r GetPoliciesResponse) ContentType() string {
 	return ""
 }
 
+type GetSmartSoftwareItemsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSmartSoftwareItemsResponse) GetJSON200() *ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSmartSoftwareItemsResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSmartSoftwareItemsResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSmartSoftwareItemsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSmartSoftwareItemsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSmartSoftwareItemsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSmartSoftwareItemsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetDevicesWithBodyWithResponse Universal Search Devices
 //
 // Queries devices in your organization by a device-fact value. <br><b>Permission Required: </b>View Devices.
@@ -1959,6 +3490,51 @@ func (c *ClientWithResponses) GetAvailableFactsWithResponse(ctx context.Context,
 	return ParseGetAvailableFactsResponse(rsp)
 }
 
+// GetSmartSoftwareWithResponse Gets a smart software item.
+//
+// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /o/{organization_id}/smart-software/{id} (the `GetSmartSoftware` operationId).
+func (c *ClientWithResponses) GetSmartSoftwareWithResponse(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*GetSmartSoftwareResponse, error) {
+	rsp, err := c.GetSmartSoftware(ctx, organizationId, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSmartSoftwareResponse(rsp)
+}
+
+// CreateSmartSoftwareNewVersionWithBodyWithResponse Creates a new version of a smart software.
+//
+// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+func (c *ClientWithResponses) CreateSmartSoftwareNewVersionWithBodyWithResponse(ctx context.Context, organizationId string, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareNewVersionResponse, error) {
+	rsp, err := c.CreateSmartSoftwareNewVersionWithBody(ctx, organizationId, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSmartSoftwareNewVersionResponse(rsp)
+}
+
+// CreateSmartSoftwareNewVersionWithResponse Creates a new version of a smart software.
+//
+// Creates a new version of a smart software. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /o/{organization_id}/smart-software/{id}/new-version (the `CreateSmartSoftwareNewVersion` operationId).
+func (c *ClientWithResponses) CreateSmartSoftwareNewVersionWithResponse(ctx context.Context, organizationId string, id string, body CreateSmartSoftwareNewVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareNewVersionResponse, error) {
+	rsp, err := c.CreateSmartSoftwareNewVersion(ctx, organizationId, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSmartSoftwareNewVersionResponse(rsp)
+}
+
 // GetAdeTokensWithBodyWithResponse Get a list of ade tokens assigned to policies.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -1983,6 +3559,51 @@ func (c *ClientWithResponses) GetAdeTokensWithResponse(ctx context.Context, body
 		return nil, err
 	}
 	return ParseGetAdeTokensResponse(rsp)
+}
+
+// GetOrganizationFilesWithBodyWithResponse Get a list of organization files.
+//
+// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+func (c *ClientWithResponses) GetOrganizationFilesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetOrganizationFilesResponse, error) {
+	rsp, err := c.GetOrganizationFilesWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationFilesResponse(rsp)
+}
+
+// GetOrganizationFilesWithResponse Get a list of organization files.
+//
+// Get a list of files for an organization. <br><b>Permission Required:</b> View Files.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/files/query (the `GetOrganizationFiles` operationId).
+func (c *ClientWithResponses) GetOrganizationFilesWithResponse(ctx context.Context, body GetOrganizationFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetOrganizationFilesResponse, error) {
+	rsp, err := c.GetOrganizationFiles(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationFilesResponse(rsp)
+}
+
+// GetOrganizationFileWithResponse Get file metadata.
+//
+// Get a file's metadata by id. <br><b>Permission Required:</b> View Files.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
+func (c *ClientWithResponses) GetOrganizationFileWithResponse(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*GetOrganizationFileResponse, error) {
+	rsp, err := c.GetOrganizationFile(ctx, fileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationFileResponse(rsp)
 }
 
 // GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
@@ -2043,6 +3664,36 @@ func (c *ClientWithResponses) GetPoliciesWithResponse(ctx context.Context, body 
 		return nil, err
 	}
 	return ParseGetPoliciesResponse(rsp)
+}
+
+// GetSmartSoftwareItemsWithBodyWithResponse Gets a list of smart software items.
+//
+// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+func (c *ClientWithResponses) GetSmartSoftwareItemsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetSmartSoftwareItemsResponse, error) {
+	rsp, err := c.GetSmartSoftwareItemsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSmartSoftwareItemsResponse(rsp)
+}
+
+// GetSmartSoftwareItemsWithResponse Gets a list of smart software items.
+//
+// Gets a list of smart software items available. <br>Items returned can be filtered based on query parameters from the request.<br>To query for the versions of a software, provide the identifier of the software in the query. <br> <br> <b>Permission Required:</b> View Smart Software.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
+func (c *ClientWithResponses) GetSmartSoftwareItemsWithResponse(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSmartSoftwareItemsResponse, error) {
+	rsp, err := c.GetSmartSoftwareItems(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSmartSoftwareItemsResponse(rsp)
 }
 
 // ParseGetDevicesResponse parses an HTTP response from a GetDevicesWithResponse call
@@ -2191,6 +3842,100 @@ func ParseGetAvailableFactsResponse(rsp *http.Response) (*GetAvailableFactsRespo
 	return response, nil
 }
 
+// ParseGetSmartSoftwareResponse parses an HTTP response from a GetSmartSoftwareWithResponse call
+func ParseGetSmartSoftwareResponse(rsp *http.Response) (*GetSmartSoftwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSmartSoftwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InstructionsServiceCustomSoftware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSmartSoftwareNewVersionResponse parses an HTTP response from a CreateSmartSoftwareNewVersionWithResponse call
+func ParseCreateSmartSoftwareNewVersionResponse(rsp *http.Response) (*CreateSmartSoftwareNewVersionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSmartSoftwareNewVersionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InstructionsServiceCustomSoftware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetAdeTokensResponse parses an HTTP response from a GetAdeTokensWithResponse call
 func ParseGetAdeTokensResponse(rsp *http.Response) (*GetAdeTokensResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2211,6 +3956,93 @@ func ParseGetAdeTokensResponse(rsp *http.Response) (*GetAdeTokensResponse, error
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOrganizationFilesResponse parses an HTTP response from a GetOrganizationFilesWithResponse call
+func ParseGetOrganizationFilesResponse(rsp *http.Response) (*GetOrganizationFilesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOrganizationFilesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOrganizationFileResponse parses an HTTP response from a GetOrganizationFileWithResponse call
+func ParseGetOrganizationFileResponse(rsp *http.Response) (*GetOrganizationFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOrganizationFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FileManagerServiceOrganizationFile
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse
@@ -2291,6 +4123,46 @@ func ParseGetPoliciesResponse(rsp *http.Response) (*GetPoliciesResponse, error) 
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSmartSoftwareItemsResponse parses an HTTP response from a GetSmartSoftwareItemsWithResponse call
+func ParseGetSmartSoftwareItemsResponse(rsp *http.Response) (*GetSmartSoftwareItemsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSmartSoftwareItemsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
