@@ -214,6 +214,8 @@ An empty script has no file. `item.yaml` holds only the settings you can edit; f
 - it would have no downloads while the current version has some (usually a forgotten `version_downloads` entry), or
 - the item was changed in Addigy outside the folder: a version published elsewhere, or the current version edited in the Addigy UI. The state file tells these apart from changes made in the folder, which are what you are publishing.
 
+For automation, `--wait-for-files 2h` waits (checking every 30 seconds) for downloads a person still has to upload, instead of failing right away; an ambiguous upload still fails at once. Combined with `--file <local build>`, it waits for the upload with exactly that content.
+
 A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.
 
 ## Output formats

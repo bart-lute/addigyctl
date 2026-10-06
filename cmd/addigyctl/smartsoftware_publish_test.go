@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/swfolder"
@@ -361,5 +362,54 @@ func TestNewVersionFileByLocalPath(t *testing.T) {
 	dl, err := publishBody(t, fake, app, []string{"Airtame-{{.Version}}.pkg"}, local)
 	if err != nil || dl != `[{"id":"`+idAirtame16b+`"}]` {
 		t.Errorf("--file <local path> should pick the upload with the same content: %s, %v", dl, err)
+	}
+}
+
+func TestNewVersionWaitsForUpload(t *testing.T) {
+	fake, app, _ := setupPublish(t)
+	defer func(d time.Duration) { filePollInterval = d }(filePollInterval)
+	filePollInterval = 10 * time.Millisecond
+
+	// 4.17.0 is uploaded while new-version waits for it.
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		fake.mu.Lock()
+		fake.files = append(fake.files, addigy.File{ID: "00000000-0000-0000-0000-000000000017", Filename: "Airtame-4.17.0.pkg", MD5Hash: "m17"})
+		fake.mu.Unlock()
+	}()
+	cmd := &SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.17.0", Yes: true, Wait: 5 * time.Second}
+	if err := cmd.Run(app); err != nil {
+		t.Fatalf("should have waited for the upload: %v", err)
+	}
+	if !strings.Contains(app.Err.(*bytes.Buffer).String(), `waiting until`) {
+		t.Errorf("expected a waiting message, got %q", app.Err)
+	}
+	if len(fake.created) != 1 {
+		t.Errorf("expected the version to be created after the upload")
+	}
+}
+
+func TestNewVersionWaitGivesUp(t *testing.T) {
+	_, app, _ := setupPublish(t)
+	defer func(d time.Duration) { filePollInterval = d }(filePollInterval)
+	filePollInterval = time.Hour // the wait must end at the deadline, not after a full interval
+	start := time.Now()
+	err := (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.17.0", Yes: true, Wait: 50 * time.Millisecond}).Run(app)
+	if time.Since(start) > 5*time.Second {
+		t.Errorf("waited %v for a 50ms --wait-for-files", time.Since(start))
+	}
+	if err == nil || !strings.Contains(err.Error(), `no file named "Airtame-4.17.0.pkg"`) || strings.Contains(err.Error(), "not uploaded") {
+		t.Errorf("expected the plain not-uploaded error after the wait, got %v", err)
+	}
+}
+
+func TestNewVersionDoesNotWaitOnAmbiguity(t *testing.T) {
+	// Waiting can't fix two different files with one name: fail at once.
+	fake, app, _ := setupPublish(t)
+	fake.files = append(fake.files, addigy.File{ID: idAirtame16b, Filename: "Airtame-4.16.0.pkg", MD5Hash: "other"})
+	start := time.Now()
+	err := (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.16.0", Yes: true, Wait: time.Hour}).Run(app)
+	if err == nil || !strings.Contains(err.Error(), "different files") || time.Since(start) > 5*time.Second {
+		t.Errorf("expected an immediate ambiguity error, got %v after %v", err, time.Since(start))
 	}
 }

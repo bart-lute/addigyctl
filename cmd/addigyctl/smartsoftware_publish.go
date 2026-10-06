@@ -11,6 +11,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
@@ -20,11 +21,12 @@ import (
 type SmartSoftwareNewVersionCmd struct {
 	Name string `arg:"" optional:"" help:"The item's name; its folder in the software root is named after it, as export names it. Or use --item or --dir."`
 	itemTarget
-	Version string   `name:"to" required:"" placeholder:"VERSION" help:"The new version: the software's own version, e.g. the app's CFBundleShortVersionString. (Not --version: that prints addigyctl's own.)"`
-	File    []string `name:"file" placeholder:"FILE" help:"A download for this version, instead of item.yaml's version_downloads (repeatable): an Addigy file ID, a local file (matched by content), or an exact uploaded file name. The first one's name is {{.Filename}}."`
-	DryRun  bool     `name:"dry-run" help:"Show the new version without creating it."`
-	Yes     bool     `help:"Create it without asking for confirmation."`
-	Force   bool     `help:"Publish despite changes made in Addigy outside this folder, or a version that is not higher than the current one."`
+	Version string        `name:"to" required:"" placeholder:"VERSION" help:"The new version: the software's own version, e.g. the app's CFBundleShortVersionString. (Not --version: that prints addigyctl's own.)"`
+	File    []string      `name:"file" placeholder:"FILE" help:"A download for this version, instead of item.yaml's version_downloads (repeatable): an Addigy file ID, a local file (matched by content), or an exact uploaded file name. The first one's name is {{.Filename}}."`
+	DryRun  bool          `name:"dry-run" help:"Show the new version without creating it."`
+	Yes     bool          `help:"Create it without asking for confirmation."`
+	Force   bool          `help:"Publish despite changes made in Addigy outside this folder, or a version that is not higher than the current one."`
+	Wait    time.Duration `name:"wait-for-files" placeholder:"DURATION" help:"Wait up to this long (e.g. 2h) for downloads that are not uploaded yet, checking every 30s, instead of failing right away. For automation, where a person uploads the files."`
 }
 
 func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
@@ -90,28 +92,9 @@ func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
 	// The version's own downloads: --file, or else version_downloads
 	// rendered for this version. Resolved after the checks above,
 	// so a missing upload never hides a more basic problem.
-	var files []addigy.File
-	var notes []string
-	if len(c.File) > 0 {
-		for _, ref := range c.File {
-			f, note, err := resolveFileRef(app, ref)
-			if err != nil {
-				return fmt.Errorf("--file %s: %w", ref, err)
-			}
-			files, notes = append(files, *f), appendNote(notes, note)
-		}
-	} else {
-		names, err := folder.VersionDownloadNames(c.Version)
-		if err != nil {
-			return err
-		}
-		for _, name := range names {
-			f, note, err := resolveFileName(app, name)
-			if err != nil {
-				return fmt.Errorf("version_downloads: %w", err)
-			}
-			files, notes = append(files, *f), appendNote(notes, note)
-		}
+	files, notes, err := c.resolveFiles(app, folder)
+	if err != nil {
+		return err
 	}
 
 	// The new version: the folder rendered for it, plus its downloads.
@@ -262,6 +245,70 @@ func newVersionBody(f swfolder.Folder, version string) (json.RawMessage, error) 
 
 // ---- files ------------------------------------------------------------------
 
+// errNotUploaded marks a download that isn't in Addigy yet: the one failure
+// --wait-for-files waits out. Ambiguous uploads fail right away.
+var errNotUploaded = errors.New("not uploaded")
+
+// notUploaded is an error that matches errNotUploaded without adding to its
+// message.
+type notUploaded struct{ msg string }
+
+func (e notUploaded) Error() string        { return e.msg }
+func (e notUploaded) Is(target error) bool { return target == errNotUploaded }
+
+// filePollInterval is how often --wait-for-files checks again.
+var filePollInterval = 30 * time.Second
+
+// resolveFiles finds the new version's downloads: --file, or else
+// version_downloads rendered for the version. With --wait-for-files it keeps
+// checking while some are not uploaded yet.
+func (c *SmartSoftwareNewVersionCmd) resolveFiles(app *App, folder swfolder.Folder) ([]addigy.File, []string, error) {
+	deadline := time.Now().Add(c.Wait)
+	announced := map[string]bool{}
+	for {
+		files, notes, err := c.resolveFilesOnce(app, folder)
+		if err == nil || !errors.Is(err, errNotUploaded) || !time.Now().Before(deadline) {
+			return files, notes, err
+		}
+		if msg := err.Error(); !announced[msg] {
+			announced[msg] = true
+			fmt.Fprintf(app.Err, "waiting until %s: %s\n", deadline.Format(time.TimeOnly), msg)
+		}
+		select {
+		case <-app.Ctx.Done():
+			return nil, nil, app.Ctx.Err()
+		case <-time.After(min(filePollInterval, time.Until(deadline))):
+		}
+	}
+}
+
+func (c *SmartSoftwareNewVersionCmd) resolveFilesOnce(app *App, folder swfolder.Folder) ([]addigy.File, []string, error) {
+	var files []addigy.File
+	var notes []string
+	if len(c.File) > 0 {
+		for _, ref := range c.File {
+			f, note, err := resolveFileRef(app, ref)
+			if err != nil {
+				return nil, nil, fmt.Errorf("--file %s: %w", ref, err)
+			}
+			files, notes = append(files, *f), appendNote(notes, note)
+		}
+		return files, notes, nil
+	}
+	names, err := folder.VersionDownloadNames(c.Version)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, name := range names {
+		f, note, err := resolveFileName(app, name)
+		if err != nil {
+			return nil, nil, fmt.Errorf("version_downloads: %w", err)
+		}
+		files, notes = append(files, *f), appendNote(notes, note)
+	}
+	return files, notes, nil
+}
+
 // resolveFileRef finds the upload a --file value means: an Addigy file ID, a
 // local file (the upload with the same content), or an exact file name.
 func resolveFileRef(app *App, ref string) (*addigy.File, string, error) {
@@ -283,7 +330,7 @@ func resolveFileRef(app *App, ref string) (*addigy.File, string, error) {
 			return nil, "", err
 		}
 		if len(uploads) == 0 {
-			return nil, "", fmt.Errorf("no upload in Addigy has this file's content (md5 %s); upload it first", sum)
+			return nil, "", notUploaded{fmt.Sprintf("no upload in Addigy has this file's content (md5 %s); upload it first", sum)}
 		}
 		return newestFile(uploads, fmt.Sprintf("the same file (md5 %s) was uploaded %d times; using the newest", sum, len(uploads)))
 	}
@@ -301,7 +348,7 @@ func resolveFileName(app *App, name string) (*addigy.File, string, error) {
 	}
 	exact := slices.DeleteFunc(found, func(f addigy.File) bool { return f.Filename != name })
 	if len(exact) == 0 {
-		return nil, "", fmt.Errorf("no file named %q is uploaded in Addigy; upload it first", name)
+		return nil, "", notUploaded{fmt.Sprintf("no file named %q is uploaded in Addigy; upload it first", name)}
 	}
 	sums := map[string]bool{}
 	for _, f := range exact {
