@@ -365,3 +365,28 @@ func TestNewRequiresKey(t *testing.T) {
 		t.Error("expected an error without an API key")
 	}
 }
+
+func TestEmptyPagesAreEmptyLists(t *testing.T) {
+	// Addigy returns "items": null when nothing matches; -j must print [].
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"items":null,"metadata":{"page":1,"page_count":0,"per_page":10,"result_count":0,"total":0}}`)
+	})
+	ctx := context.Background()
+	files, err := api.SearchFiles(ctx, FileQuery{MD5Hashes: []string{"x"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	alerts, err := api.SearchAlerts(ctx, AlertQuery{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := api.SearchEvents(ctx, EventQuery{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, v := range map[string]any{"files": files.Items, "alerts": alerts.Items, "events": events.Items} {
+		if b, _ := json.Marshal(v); string(b) != "[]" {
+			t.Errorf("%s: no results marshal as %s, want []", name, b)
+		}
+	}
+}

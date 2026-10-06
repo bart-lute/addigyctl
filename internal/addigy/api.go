@@ -88,6 +88,15 @@ func (e *APIError) Error() string {
 	return msg
 }
 
+// nonNil makes a page with no results an empty list rather than nil, so it
+// prints as [] in JSON: Addigy returns "items": null for none.
+func nonNil[T any](items []T) []T {
+	if items == nil {
+		return []T{}
+	}
+	return items
+}
+
 func checkStatus(status int, body []byte) error {
 	if status >= 200 && status < 300 {
 		return nil
@@ -450,7 +459,7 @@ func (a *API) SearchAlerts(ctx context.Context, q AlertQuery) (*AlertPage, error
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		return nil, fmt.Errorf("decoding alerts: %w", err)
 	}
-	return &AlertPage{Items: raw.Items, Metadata: raw.Metadata}, nil
+	return &AlertPage{Items: nonNil(raw.Items), Metadata: raw.Metadata}, nil
 }
 
 // ---- Events -------------------------------------------------------------
@@ -551,7 +560,7 @@ func (a *API) SearchEvents(ctx context.Context, q EventQuery) (*EventPage, error
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		return nil, fmt.Errorf("decoding events: %w", err)
 	}
-	return &EventPage{Items: raw.Items, Metadata: raw.Metadata}, nil
+	return &EventPage{Items: nonNil(raw.Items), Metadata: raw.Metadata}, nil
 }
 
 // ---- Smart Software ---------------------------------------------------------
@@ -767,7 +776,7 @@ func (a *API) SearchFiles(ctx context.Context, q FileQuery) (*FilePage, error) {
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		return nil, fmt.Errorf("decoding files: %w", err)
 	}
-	return &FilePage{Items: raw.Items, Metadata: raw.Metadata}, nil
+	return &FilePage{Items: nonNil(raw.Items), Metadata: raw.Metadata}, nil
 }
 
 // File fetches one file's metadata by id (GET /oa/files/{file_id}).
