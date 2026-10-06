@@ -109,6 +109,15 @@ func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
 	for _, f := range files {
 		next.Downloads = append(next.Downloads, swfolder.Download{ID: f.ID})
 	}
+	// Placeholders left after rendering are literal braces from the folder
+	// (an escaped "{{"): typically an unfilled one exported from Addigy.
+	if u := next.UnfilledPlaceholders(); len(u) > 0 {
+		msg := fmt.Sprintf("%s %s would contain unfilled placeholders: %s", current.BaseIdentifier, c.Version, strings.Join(u, ", "))
+		if !c.Force {
+			return fmt.Errorf("not publishing: %s. They are escaped in the folder ({{\"{{\"}}...); write them as {{.Version}}, or use --force if they're meant literally", msg)
+		}
+		problems = append(problems, msg)
+	}
 	// Losing every download is almost always a forgotten version_downloads
 	// entry (e.g. an upload named in a way export couldn't turn into a
 	// pattern), and a version without its installer installs nothing.

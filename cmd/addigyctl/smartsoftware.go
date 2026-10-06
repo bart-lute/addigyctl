@@ -116,6 +116,13 @@ func (c *SmartSoftwareExportCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
+	// A placeholder in Addigy's own content was never filled in: almost
+	// always a folder's script pasted into Addigy as is.
+	unfilled := folder.UnfilledPlaceholders()
+	for _, u := range unfilled {
+		fmt.Fprintf(app.Err, "warning: Addigy's %s holds an unfilled placeholder; was a folder's script pasted into Addigy as is? Fix it in Addigy, then export again.\n", u)
+	}
+
 	// With --placeholders, downloads named after the version become
 	// version_downloads patterns: "helloworld-1.0.0" -> "helloworld-{{.Version}}".
 	if c.Placeholders {
@@ -158,7 +165,8 @@ func (c *SmartSoftwareExportCmd) Run(app *App) error {
 			Version       string         `json:"version"`
 			Files         []string       `json:"files"`
 			Placeholders  map[string]int `json:"placeholders,omitempty"` // with --placeholders: replacements per file
-		}{dir, s.Identifier, s.InstructionID, swVersion(*s), files, replaced})
+			Unfilled      []string       `json:"unfilled_placeholders,omitempty"`
+		}{dir, s.Identifier, s.InstructionID, swVersion(*s), files, replaced, unfilled})
 	}
 	fmt.Fprintf(app.Out, "Exported %s %s to %s (%s)\n", s.BaseIdentifier, swVersion(*s), dir, strings.Join(files, ", "))
 	if c.Placeholders {

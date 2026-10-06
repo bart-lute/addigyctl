@@ -158,3 +158,22 @@ func TestVersionDownloadNames(t *testing.T) {
 		t.Errorf("expected an error naming the pattern, got %v", err)
 	}
 }
+
+func TestUnfilledPlaceholders(t *testing.T) {
+	f := sample()
+	if got := f.UnfilledPlaceholders(); len(got) != 1 || !strings.HasPrefix(got[0], "item.yaml: version_downloads[0]") {
+		t.Errorf("sample's version_downloads pattern: %v", got)
+	}
+	f.VersionDownloads = nil
+	f.InstallScript = `cp "/x/App ({{.Version}})/app.pkg" /tmp; echo "${HOME}" '{{ not one }}'`
+	f.PredefinedConditions = map[string]any{"app_exists": map[string]any{"version": "{{ .Filename }}"}}
+	got := f.UnfilledPlaceholders()
+	want := []string{"install.sh ({{.Version}})", "item.yaml: predefined_conditions.app_exists.version ({{ .Filename }})"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	f.InstallScript, f.PredefinedConditions = "echo {{literal}} ${VERSION}", nil
+	if got := f.UnfilledPlaceholders(); len(got) != 0 {
+		t.Errorf("false positives: %q", got)
+	}
+}

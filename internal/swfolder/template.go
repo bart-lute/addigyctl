@@ -3,6 +3,7 @@ package swfolder
 import (
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"text/template"
@@ -58,6 +59,24 @@ func (f Folder) VersionDownloadNames(version string) ([]string, error) {
 		return nil, err
 	}
 	return r.VersionDownloads, nil
+}
+
+var placeholderRE = regexp.MustCompile(`\{\{-?\s*\.[A-Za-z_]\w*\s*-?\}\}`)
+
+// UnfilledPlaceholders lists where f holds text that looks like a
+// placeholder, such as {{.Version}}: a script's file name or
+// "item.yaml: <field>". In content from Addigy, or in a rendered folder, that
+// means a placeholder was never filled in, typically because a folder's
+// script was pasted into Addigy as is.
+func (f Folder) UnfilledPlaceholders() []string {
+	var found []string
+	f.mapStrings(func(where, s string) (string, error) {
+		if m := placeholderRE.FindString(s); m != "" {
+			found = append(found, fmt.Sprintf("%s (%s)", where, m))
+		}
+		return s, nil
+	})
+	return found
 }
 
 // Literal escapes every "{{" in f, so that rendering it gives back f exactly.

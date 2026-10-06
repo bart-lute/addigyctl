@@ -432,3 +432,38 @@ func TestNewVersionJSONReportsFiles(t *testing.T) {
 		t.Errorf("downloads = %+v, want %+v", res.Downloads, want)
 	}
 }
+
+func TestNewVersionRefusesUnfilledPlaceholders(t *testing.T) {
+	fake, app, _ := setupPublish(t)
+	dir := filepath.Join(app.G.SoftwareRoot, "airtame")
+	f, err := swfolder.Read(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// What export makes of a {{.Version}} pasted into Addigy: escaped braces.
+	f.InstallScript = `cp "/x/Airtame ({{"{{"}}.Version}})/a.pkg" /tmp` + "\n"
+	if err := swfolder.Write(dir, f, "", true); err != nil {
+		t.Fatal(err)
+	}
+	err = (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.16.0", Yes: true}).Run(app)
+	if err == nil || !strings.Contains(err.Error(), "unfilled placeholders: install.sh ({{.Version}})") {
+		t.Fatalf("expected a refusal, got %v", err)
+	}
+	if len(fake.created) != 0 {
+		t.Fatal("nothing may be created when refusing")
+	}
+}
+
+func TestExportWarnsAboutUnfilledPlaceholders(t *testing.T) {
+	item := `{"identifier":"B-u1","instruction_id":"i1","base_identifier":"B","version":"1.0",
+		"installation_script":"diskutil image attach \"/x/B ({{.Version}})/b.dmg\""}`
+	srv := newSmartSoftwareServer(t, item)
+	errOut := &bytes.Buffer{}
+	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k", BaseURL: srv.URL + "/api/v2", SoftwareRoot: t.TempDir()}, Out: &bytes.Buffer{}, Err: errOut}
+	if err := (&SmartSoftwareExportCmd{Ref: "B"}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(errOut.String(), "install.sh ({{.Version}}) holds an unfilled placeholder") {
+		t.Errorf("expected a warning, got %q", errOut)
+	}
+}
