@@ -160,7 +160,7 @@ func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
 		FromVersion:     swVersion(current),
 		FromInstruction: current.InstructionID,
 		Version:         c.Version,
-		Downloads:       append([]string{}, c.File...),
+		Downloads:       resultFiles(next.Downloads, files),
 		Changed:         changes,
 	}
 	if c.DryRun {
@@ -210,15 +210,37 @@ func (c *SmartSoftwareNewVersionCmd) Run(app *App) error {
 }
 
 type newVersionResult struct {
-	DryRun          bool     `json:"dry_run"`
-	Dir             string   `json:"dir"`
-	Identifier      string   `json:"identifier"`
-	FromVersion     string   `json:"from_version"`
-	FromInstruction string   `json:"from_instruction_id"`
-	Version         string   `json:"version"`
-	InstructionID   string   `json:"instruction_id,omitempty"` // the created version; empty on a dry run
-	Downloads       []string `json:"downloads"`
-	Changed         []string `json:"changed"` // item.yaml field paths and script file names that differ from the current version
+	DryRun          bool         `json:"dry_run"`
+	Dir             string       `json:"dir"`
+	Identifier      string       `json:"identifier"`
+	FromVersion     string       `json:"from_version"`
+	FromInstruction string       `json:"from_instruction_id"`
+	Version         string       `json:"version"`
+	InstructionID   string       `json:"instruction_id,omitempty"` // the created version; empty on a dry run
+	Downloads       []resultFile `json:"downloads"`                // the new version's downloads, as found in Addigy
+	Changed         []string     `json:"changed"`                  // item.yaml field paths and script file names that differ from the current version
+}
+
+// resultFile is one download of the new version. Filename and MD5 are known
+// for the version's own files; item.yaml's downloads only have their ID.
+type resultFile struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename,omitempty"`
+	MD5      string `json:"md5,omitempty"`
+}
+
+func resultFiles(downloads []swfolder.Download, files []addigy.File) []resultFile {
+	out := make([]resultFile, 0, len(downloads))
+	for _, d := range downloads {
+		r := resultFile{ID: d.ID}
+		for _, f := range files {
+			if f.ID == d.ID {
+				r.Filename, r.MD5 = f.Filename, f.MD5Hash
+			}
+		}
+		out = append(out, r)
+	}
+	return out
 }
 
 // newVersionBody is the request body for a new version: the rendered

@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -411,5 +412,23 @@ func TestNewVersionDoesNotWaitOnAmbiguity(t *testing.T) {
 	err := (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.16.0", Yes: true, Wait: time.Hour}).Run(app)
 	if err == nil || !strings.Contains(err.Error(), "different files") || time.Since(start) > 5*time.Second {
 		t.Errorf("expected an immediate ambiguity error, got %v after %v", err, time.Since(start))
+	}
+}
+
+func TestNewVersionJSONReportsFiles(t *testing.T) {
+	_, app, out := setupPublish(t)
+	app.G.JSON = true
+	if err := (&SmartSoftwareNewVersionCmd{Name: "Airtame", Version: "4.16.0", DryRun: true}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	var res struct {
+		Downloads []resultFile `json:"downloads"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &res); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	want := []resultFile{{ID: idAirtame16, Filename: "Airtame-4.16.0.pkg", MD5: "m16"}}
+	if !reflect.DeepEqual(res.Downloads, want) {
+		t.Errorf("downloads = %+v, want %+v", res.Downloads, want)
 	}
 }
