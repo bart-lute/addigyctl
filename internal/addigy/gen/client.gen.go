@@ -584,6 +584,22 @@ type FileManagerServiceOrganizationFile struct {
 	UserEmail   *string `json:"user_email,omitempty"`
 }
 
+// FileTrackEntitiesFilesTrackedRequest defines model for file_track_entities.FilesTrackedRequest.
+type FileTrackEntitiesFilesTrackedRequest struct {
+	FileIds *[]string `json:"file_ids,omitempty"`
+}
+
+// FileTrackEntitiesTrackedFileDetail defines model for file_track_entities.TrackedFileDetail.
+type FileTrackEntitiesTrackedFileDetail struct {
+	FeatureName        *string `json:"feature_name,omitempty"`
+	FeatureType        *string `json:"feature_type,omitempty"`
+	FileId             *string `json:"file_id,omitempty"`
+	IsOnboardingConfig *bool   `json:"is_onboarding_config,omitempty"`
+	ItemId             *string `json:"item_id,omitempty"`
+	ItemName           *string `json:"item_name,omitempty"`
+	OsType             *string `json:"os_type,omitempty"`
+}
+
 // FilesOrganizationFilesRequest defines model for files.OrganizationFilesRequest.
 type FilesOrganizationFilesRequest struct {
 	Ids     *[]string `json:"ids,omitempty"`
@@ -1409,6 +1425,9 @@ type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
 // GetSystemEventsJSONRequestBody defines body for GetSystemEvents for application/json ContentType.
 type GetSystemEventsJSONRequestBody = SystemEventsSearchRequestQuery
 
+// GetTrackedFilesJSONRequestBody defines body for GetTrackedFiles for application/json ContentType.
+type GetTrackedFilesJSONRequestBody = FileTrackEntitiesFilesTrackedRequest
+
 // CreateSmartSoftwareNewVersionJSONRequestBody defines body for CreateSmartSoftwareNewVersion for application/json ContentType.
 type CreateSmartSoftwareNewVersionJSONRequestBody CreateSmartSoftwareNewVersionJSONBody
 
@@ -1536,6 +1555,20 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
 	GetSystemEvents(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetTrackedFilesWithBody Get a list of file usages for a list of File IDs.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+	GetTrackedFilesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetTrackedFiles Get a list of file usages for a list of File IDs.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+	GetTrackedFiles(ctx context.Context, body GetTrackedFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetDevicePolicyAssignments Get policy assignments for a device.
 	//
@@ -1744,6 +1777,40 @@ func (c *Client) GetSystemEventsWithBody(ctx context.Context, contentType string
 // Corresponds with POST /events/query (the `GetSystemEvents` operationId).
 func (c *Client) GetSystemEvents(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSystemEventsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetTrackedFilesWithBody Get a list of file usages for a list of File IDs.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+func (c *Client) GetTrackedFilesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetTrackedFilesRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetTrackedFiles Get a list of file usages for a list of File IDs.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+func (c *Client) GetTrackedFiles(ctx context.Context, body GetTrackedFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetTrackedFilesRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2125,6 +2192,46 @@ func NewGetSystemEventsRequestWithBody(server string, contentType string, body i
 	}
 
 	operationPath := fmt.Sprintf("/events/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetTrackedFilesRequest calls the generic GetTrackedFiles builder with application/json body
+func NewGetTrackedFilesRequest(server string, body GetTrackedFilesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetTrackedFilesRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetTrackedFilesRequestWithBody constructs an http.Request for the GetTrackedFiles method, with any body, and a specified content type
+func NewGetTrackedFilesRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/files/usage")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2669,6 +2776,20 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /events/query (the `GetSystemEvents` operationId).
 	GetSystemEventsWithResponse(ctx context.Context, body GetSystemEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSystemEventsResponse, error)
 
+	// GetTrackedFilesWithBodyWithResponse Get a list of file usages for a list of File IDs.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+	GetTrackedFilesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetTrackedFilesResponse, error)
+
+	// GetTrackedFilesWithResponse Get a list of file usages for a list of File IDs.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+	GetTrackedFilesWithResponse(ctx context.Context, body GetTrackedFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetTrackedFilesResponse, error)
+
 	// GetDevicePolicyAssignmentsWithResponse Get policy assignments for a device.
 	//
 	// Returns the list of policy ids assigned to the given device.
@@ -2917,6 +3038,54 @@ func (r GetSystemEventsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSystemEventsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetTrackedFilesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]FileTrackEntitiesTrackedFileDetail
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetTrackedFilesResponse) GetJSON200() *[]FileTrackEntitiesTrackedFileDetail {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetTrackedFilesResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetBody returns the raw response body bytes
+func (r GetTrackedFilesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetTrackedFilesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetTrackedFilesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetTrackedFilesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3581,6 +3750,32 @@ func (c *ClientWithResponses) GetSystemEventsWithResponse(ctx context.Context, b
 	return ParseGetSystemEventsResponse(rsp)
 }
 
+// GetTrackedFilesWithBodyWithResponse Get a list of file usages for a list of File IDs.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+func (c *ClientWithResponses) GetTrackedFilesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetTrackedFilesResponse, error) {
+	rsp, err := c.GetTrackedFilesWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetTrackedFilesResponse(rsp)
+}
+
+// GetTrackedFilesWithResponse Get a list of file usages for a list of File IDs.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /files/usage (the `GetTrackedFiles` operationId).
+func (c *ClientWithResponses) GetTrackedFilesWithResponse(ctx context.Context, body GetTrackedFilesJSONRequestBody, reqEditors ...RequestEditorFn) (*GetTrackedFilesResponse, error) {
+	rsp, err := c.GetTrackedFiles(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetTrackedFilesResponse(rsp)
+}
+
 // GetDevicePolicyAssignmentsWithResponse Get policy assignments for a device.
 //
 // Returns the list of policy ids assigned to the given device.
@@ -3900,6 +4095,39 @@ func ParseGetSystemEventsResponse(rsp *http.Response) (*GetSystemEventsResponse,
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetTrackedFilesResponse parses an HTTP response from a GetTrackedFilesWithResponse call
+func ParseGetTrackedFilesResponse(rsp *http.Response) (*GetTrackedFilesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetTrackedFilesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []FileTrackEntitiesTrackedFileDetail
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 

@@ -166,6 +166,7 @@ Operations to add to `include-operation-ids` in `oapi-codegen.yaml`:
 | `DeleteSmartSoftware` | `DELETE /o/{organization_id}/smart-software/{id}` | delete (one version; needs the "Delete Smart Software" permission) |
 | `GetOrganizationFiles` | `POST /oa/files/query` (filters: `md5_hash`, `search_term`, `ids`) | files find |
 | `GetOrganizationFile` | `GET /oa/files/{file_id}` | files find, export |
+| `GetTrackedFiles` | `POST /files/usage` (body: `file_ids`; 687 IDs in one call works) | files list (Addigy's own usage tracking: Smart Software downloads and uploaded icons incl. archived versions, Self Service, policies) |
 | `AssignSmartSoftwareToPolicy` | `POST /o/{organization_id}/policies/{policy_id}/smart-software/{asset_id}` | policies assign-software |
 | `UnassignSmartSoftwareFromPolicy` | `DELETE …/smart-software/{asset_id}` | policies unassign-software |
 

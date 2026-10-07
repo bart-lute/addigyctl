@@ -83,7 +83,7 @@ addigyctl ade      tokens
 addigyctl alerts   list
 addigyctl events   list
 addigyctl smart-software list | get | export | new-version | delete
-addigyctl files    find
+addigyctl files    list | find
 addigyctl config   path | init | show
 ```
 
@@ -220,11 +220,22 @@ For automation, `--wait-for-files 2h` waits (checking every 30 seconds) for down
 
 A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.
 
-**Deleting.** `delete` removes one version, named by its `instruction_id` only (a name or `identifier` would mean whichever version is latest). The item's other versions stay, and so do its downloads in Addigy's file storage. It shows the version and its downloads and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The API key needs Addigy's "Delete Smart Software" permission.
+**Deleting.** `delete` removes one version, named by its `instruction_id` only (a name or `identifier` would mean whichever version is latest). The item's other versions stay, and so do its downloads in Addigy's file storage (`files list --unused` shows the ones nothing uses any more). It shows the version and its downloads and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The API key needs Addigy's "Delete Smart Software" permission.
 
 Before deleting, it writes a backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If the backup can't be written, nothing is deleted; if the delete fails, the backup is removed again. `--no-backup` skips it. There is no restore command yet.
 
 A version that is assigned to policies is deleted all the same: Addigy silently removes it from those policies, and the backup does not record them. The v2 API doesn't show these assignments reliably, so addigyctl can't check first; look in the Addigy UI before deleting a version that may be in use.
+
+### Files
+
+```sh
+addigyctl files list                     # every uploaded file and what uses it, newest first
+addigyctl files list --unused --sort size   # cleanup candidates, largest first
+addigyctl files list --name helloworld -o csv
+addigyctl files find --md5 10da1c00044e49763b82e02aeab98b30
+```
+
+`files list` shows every file in Addigy's file storage with the number of places it is used and what uses it, as Addigy itself tracks it: Smart Software versions (their downloads and uploaded icons, archived versions included), Self Service and policies. A file with no uses is used nowhere, which makes it a candidate for cleaning up; Addigy refuses to delete a file that is in use. With `--unused` the table leaves out the then empty `USES` and `USED BY` columns (CSV keeps them). Items Addigy has no name for show as their type and ID (e.g. `policy b8763068-…`). `--sort` takes `created` (default, newest first), `size` and `uses` (largest and most first) or `name`; `--desc` reverses that. Tables shorten long values, including the very long IDs of files uploaded before 2020; `-o csv` and `-j` keep them whole.
 
 ## Output formats
 
@@ -241,7 +252,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and `delete -j` write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used); everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and `delete -j` write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 

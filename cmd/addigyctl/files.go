@@ -2,12 +2,16 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
 )
 
 type FilesCmd struct {
+	List FilesListCmd `cmd:"" help:"List every uploaded file and what uses it."`
 	Find FilesFindCmd `cmd:"" help:"Find uploaded files (e.g. a Smart Software installer) by MD5 hash or name."`
 }
 
@@ -56,4 +60,177 @@ func (c *FilesFindCmd) Run(app *App) error {
 		app.footer("%d files", len(pg.Items))
 	}
 	return nil
+}
+
+// ---- list -------------------------------------------------------------------
+
+type FilesListCmd struct {
+	Unused bool   `help:"Only files nothing uses: candidates for cleaning up."`
+	Name   string `help:"Only files whose name contains this text (case-insensitive)."`
+	Sort   string `help:"Column to sort by: created (default, newest first), size (largest first), uses (most first) or name (A-Z)."`
+	Desc   bool   `help:"Reverse the column's default order."`
+}
+
+// fileUses is a file with the places Addigy tracks it as used: Smart Software
+// versions (downloads and uploaded icons, archived versions included), Self
+// Service, policies.
+type fileUses struct {
+	addigy.File
+	Usages []addigy.FileUsage `json:"usages"`
+}
+
+func (c *FilesListCmd) Run(app *App) error {
+	col := strings.ToLower(c.Sort)
+	if col == "" {
+		col = "created"
+	}
+	if _, ok := fileSortMostFirst[col]; !ok {
+		return fmt.Errorf("unknown --sort column %q (use one of: created, size, uses, name)", col)
+	}
+	api, err := app.API()
+	if err != nil {
+		return err
+	}
+	var files []addigy.File
+	q := addigy.FileQuery{PerPage: 100} // the endpoint's maximum
+	for q.Page = 1; ; q.Page++ {
+		pg, err := api.SearchFiles(app.Ctx, q)
+		if err != nil {
+			return err
+		}
+		files = append(files, pg.Items...)
+		if len(pg.Items) == 0 || q.Page >= pg.Metadata.PageCount {
+			break
+		}
+	}
+
+	byID := map[string][]addigy.FileUsage{}
+	if len(files) > 0 {
+		ids := make([]string, len(files))
+		for i, f := range files {
+			ids[i] = f.ID
+		}
+		usages, err := api.FileUsages(app.Ctx, ids)
+		if err != nil {
+			return err
+		}
+		for _, u := range usages {
+			byID[u.FileID] = append(byID[u.FileID], u)
+		}
+	}
+
+	needle := strings.ToLower(c.Name)
+	shown := []fileUses{}
+	for _, f := range files {
+		fu := fileUses{File: f, Usages: byID[f.ID]}
+		if fu.Usages == nil {
+			fu.Usages = []addigy.FileUsage{}
+		}
+		if c.Unused && len(fu.Usages) > 0 || !strings.Contains(strings.ToLower(f.Filename), needle) {
+			continue
+		}
+		shown = append(shown, fu)
+	}
+	sortFileUses(shown, col, fileSortMostFirst[col] != c.Desc)
+
+	if app.json() {
+		return output.JSON(app.Out, shown)
+	}
+	style, err := app.DateStyle()
+	if err != nil {
+		return err
+	}
+	var unused int
+	var unusedSize int64
+	rows := make([][]string, 0, len(shown))
+	for _, f := range shown {
+		if len(f.Usages) == 0 {
+			unused++
+			unusedSize += f.Size
+		}
+		id, name, usedBy := f.ID, f.Filename, fileUsedBy(f.Usages)
+		var size any = f.Size
+		// Files from before 2020 can have IDs of hundreds of characters;
+		// CSV and JSON keep them whole.
+		if !app.csv() {
+			id = output.Truncate(id, 36)
+			name = output.Truncate(name, 60)
+			size = humanSize(f.Size)
+			usedBy = output.Truncate(usedBy, 60)
+		}
+		rows = append(rows, []string{
+			app.cell(id), app.cell(name), app.cell(size), app.cell(style.DateTime(f.Created)),
+			app.cell(fmt.Sprint(len(f.Usages))), app.cell(usedBy),
+		})
+	}
+	headers := []string{"ID", "FILENAME", "SIZE", "CREATED", "USES", "USED BY"}
+	// With --unused the usage columns say nothing; CSV keeps them so its
+	// columns never change.
+	if c.Unused && !app.csv() {
+		headers = headers[:4]
+		for i := range rows {
+			rows[i] = rows[i][:4]
+		}
+	}
+	if err := output.Rows(app.Out, app.Format(), headers, rows, app.borders()); err != nil {
+		return err
+	}
+	app.footer("%d files, %d unused (%s)", len(shown), unused, humanSize(unusedSize))
+	return nil
+}
+
+// fileSortMostFirst lists the --sort columns; true ones default to
+// descending (newest, largest, most first).
+var fileSortMostFirst = map[string]bool{"created": true, "size": true, "uses": true, "name": false}
+
+func sortFileUses(files []fileUses, col string, desc bool) {
+	sort.SliceStable(files, func(i, j int) bool {
+		a, b := files[i], files[j]
+		var c int
+		switch col {
+		case "created":
+			c = cmpString(a.Created, b.Created) // RFC 3339 in UTC: sorts as text
+		case "size":
+			c = cmpInt(int(a.Size), int(b.Size))
+		case "uses":
+			c = cmpInt(len(a.Usages), len(b.Usages))
+		case "name":
+			c = cmpString(a.Filename, b.Filename)
+		}
+		if c == 0 {
+			return cmpString(a.Filename, b.Filename) < 0 // ties A-Z either way
+		}
+		if desc {
+			return c > 0
+		}
+		return c < 0
+	})
+}
+
+// fileUsedBy names what uses a file. Items Addigy has no name for (it says
+// "Not available", e.g. for a policy) show their type and ID instead.
+func fileUsedBy(usages []addigy.FileUsage) string {
+	names := make([]string, len(usages))
+	for i, u := range usages {
+		names[i] = u.ItemName
+		if names[i] == "" || names[i] == "Not available" {
+			names[i] = u.FeatureType + " " + u.ItemID
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+// humanSize renders a byte count in decimal units, as macOS's Finder does.
+func humanSize(n int64) string {
+	if n < 1000 {
+		return fmt.Sprintf("%d B", n)
+	}
+	v := float64(n)
+	for _, unit := range []string{"KB", "MB", "GB"} {
+		v /= 1000
+		if v < 1000 {
+			return fmt.Sprintf("%.1f %s", v, unit)
+		}
+	}
+	return fmt.Sprintf("%.1f TB", v/1000)
 }

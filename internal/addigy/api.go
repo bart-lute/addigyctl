@@ -805,3 +805,31 @@ func (a *API) File(ctx context.Context, id string) (*File, error) {
 	}
 	return &f, nil
 }
+
+// FileUsage is one place an uploaded file is used, as Addigy tracks it.
+type FileUsage struct {
+	FileID             string `json:"file_id"`
+	FeatureType        string `json:"feature_type"`
+	FeatureName        string `json:"feature_name"`
+	ItemID             string `json:"item_id"`
+	ItemName           string `json:"item_name"`
+	OSType             string `json:"os_type"`
+	IsOnboardingConfig bool   `json:"is_onboarding_config"`
+}
+
+// FileUsages lists where the given files are used (POST /files/usage). A
+// file that is used nowhere has no entries.
+func (a *API) FileUsages(ctx context.Context, ids []string) ([]FileUsage, error) {
+	resp, err := a.c.GetTrackedFilesWithResponse(ctx, gen.GetTrackedFilesJSONRequestBody{FileIds: &ids})
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var u []FileUsage
+	if err := json.Unmarshal(resp.Body, &u); err != nil {
+		return nil, fmt.Errorf("decoding file usages: %w", err)
+	}
+	return nonNil(u), nil
+}
