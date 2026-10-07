@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool for the [Addigy](https://addigy.com) v2 API of a single tenant. It queries devices, policies, facts, ADE tokens, alerts, system events and Smart Software, and it can publish new Smart Software versions from item folders kept as code, and delete versions after backing them up (see [Smart Software](#smart-software)). Publishing and deleting are its only write operations; everything else is read-only.
+A small command line tool for the [Addigy](https://addigy.com) v2 API of a single tenant. It queries devices, policies, facts, ADE tokens, alerts, system events and Smart Software, and it can publish new Smart Software versions from item folders kept as code, and delete versions after backing them up (see [Smart Software](#smart-software)), and delete uploaded files nothing uses (see [Files](#files)). Publishing and deleting are its only write operations; everything else is read-only.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -71,7 +71,7 @@ addigyctl config show     # effective configuration, API key redacted
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. `backup_dir` is where `smart-software delete` writes its backups; it defaults to `backups` next to the config file, and `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. `backup_dir` is where `smart-software delete` writes its backups and `files delete` its deletion logs; it defaults to `backups` next to the config file, and `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -83,7 +83,7 @@ addigyctl ade      tokens
 addigyctl alerts   list
 addigyctl events   list
 addigyctl smart-software list | get | export | new-version | delete
-addigyctl files    list | find
+addigyctl files    list | find | delete
 addigyctl config   path | init | show
 ```
 
@@ -233,9 +233,15 @@ addigyctl files list                     # every uploaded file and what uses it,
 addigyctl files list --unused --sort size   # cleanup candidates, largest first
 addigyctl files list --name helloworld -o csv
 addigyctl files find --md5 10da1c00044e49763b82e02aeab98b30
+addigyctl files delete --unused --name citrix --dry-run
+addigyctl files delete <file-id> <file-id>
 ```
 
-`files list` shows every file in Addigy's file storage with the number of places it is used and what uses it, as Addigy itself tracks it: Smart Software versions (their downloads and uploaded icons, archived versions included), Self Service and policies. A file with no uses is used nowhere, which makes it a candidate for cleaning up; Addigy refuses to delete a file that is in use. With `--unused` the table leaves out the then empty `USES` and `USED BY` columns (CSV keeps them). Items Addigy has no name for show as their type and ID (e.g. `policy b8763068-…`). `--sort` takes `created` (default, newest first), `size` and `uses` (largest and most first) or `name`; `--desc` reverses that. Tables shorten long values, including the very long IDs of files uploaded before 2020; `-o csv` and `-j` keep them whole.
+`files list` shows every file in Addigy's file storage with the number of places it is used and what uses it, as Addigy itself tracks it: Smart Software versions (their downloads and uploaded icons, archived versions included), Self Service and policies. A file with no uses is used nowhere, which makes it a candidate for cleaning up; Addigy refuses to delete a file that is in use. With `--unused` the table leaves out the then empty `USES` and `USED BY` columns (CSV keeps them).
+
+`files delete` deletes files nothing uses, for good: Addigy keeps no copy, and the API can't download them first. Name the files by ID, or pick them with `--unused` plus `--name` and/or `--before YYYY-MM-DD` (one is required, so it never means every unused file at once). It refuses any named file that is in use, shows the files with their total size and asks for confirmation (`--dry-run` only shows them; `--yes` skips the question; without a terminal it refuses rather than ask). Right before deleting it checks the usage again and skips a file that has come into use since. A failed delete doesn't stop the others; they are all reported at the end. Only a refusal of the API key itself (401 or 403) stops the run, since it would refuse every file. The API key needs Addigy's "Delete Files" permission.
+
+Each run writes a deletion log, readable only by you, to `<backup_dir>/files/deleted-<UTC time>.json`: every file's ID, name, size, MD5 and upload time, and whether it was deleted. It is not a backup, but it shows what was removed, and the MD5 recognizes a local copy (`md5 -q <file>`). If the log can't be written, nothing is deleted. Items Addigy has no name for show as their type and ID (e.g. `policy b8763068-…`). `--sort` takes `created` (default, newest first), `size` and `uses` (largest and most first) or `name`; `--desc` reverses that. Tables shorten long values, including the very long IDs of files uploaded before 2020; `-o csv` and `-j` keep them whole.
 
 ## Output formats
 
@@ -252,7 +258,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and `delete -j` write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete`, and `files delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and both `delete -j`s write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 

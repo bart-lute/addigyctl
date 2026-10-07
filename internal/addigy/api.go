@@ -806,6 +806,16 @@ func (a *API) File(ctx context.Context, id string) (*File, error) {
 	return &f, nil
 }
 
+// DeleteFile deletes an uploaded file for good
+// (DELETE /o/{organization_id}/files/{file_id}).
+func (a *API) DeleteFile(ctx context.Context, orgID, id string) error {
+	resp, err := a.c.DeleteOrganizationFileWithResponse(ctx, orgID, id)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp.StatusCode(), resp.Body)
+}
+
 // FileUsage is one place an uploaded file is used, as Addigy tracks it.
 type FileUsage struct {
 	FileID             string `json:"file_id"`

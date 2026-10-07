@@ -168,14 +168,14 @@ func TestDeleteNeedsInstructionID(t *testing.T) {
 
 func TestDeleteBackupDir(t *testing.T) {
 	app := &App{G: &Globals{}, Cfg: config.File{BackupDir: "/cfg/backups"}}
-	if d, _ := (&SmartSoftwareDeleteCmd{BackupDir: "/flag"}).backupDir(app); d != "/flag" {
+	if d, _ := backupDir(app, "/flag"); d != "/flag" {
 		t.Errorf("--backup-dir: %q", d)
 	}
-	if d, _ := (&SmartSoftwareDeleteCmd{}).backupDir(app); d != "/cfg/backups" {
+	if d, _ := backupDir(app, ""); d != "/cfg/backups" {
 		t.Errorf("config backup_dir: %q", d)
 	}
 	app.Cfg.BackupDir = ""
-	if d, err := (&SmartSoftwareDeleteCmd{}).backupDir(app); err != nil || !strings.HasSuffix(d, filepath.Join("addigyctl", "backups")) {
+	if d, err := backupDir(app, ""); err != nil || !strings.HasSuffix(d, filepath.Join("addigyctl", "backups")) {
 		t.Errorf("default: %q, %v", d, err)
 	}
 }

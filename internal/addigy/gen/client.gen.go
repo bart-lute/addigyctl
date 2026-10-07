@@ -1585,6 +1585,13 @@ type ClientInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteOrganizationFile Deletes an organization file.
+	//
+	// Deletes a file for an organization. <br><b>Permission Required:</b> Delete Files.
+	//
+	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
+	DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteSmartSoftware Deletes a smart software item.
 	//
 	// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
@@ -1846,6 +1853,23 @@ func (c *Client) GetDevicePolicyAssignments(ctx context.Context, organizationId 
 // Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAvailableFactsRequest(c.Server, organizationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteOrganizationFile Deletes an organization file.
+//
+// Deletes a file for an organization. <br><b>Permission Required:</b> Delete Files.
+//
+// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
+func (c *Client) DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOrganizationFileRequest(c.Server, organizationId, fileId)
 	if err != nil {
 		return nil, err
 	}
@@ -2319,6 +2343,47 @@ func NewGetAvailableFactsRequest(server string, organizationId string) (*http.Re
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteOrganizationFileRequest constructs an http.Request for the DeleteOrganizationFile method
+func NewDeleteOrganizationFileRequest(server string, organizationId string, fileId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "file_id", fileId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/files/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2809,6 +2874,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFactsWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetAvailableFactsResponse, error)
 
+	// DeleteOrganizationFileWithResponse Deletes an organization file.
+	//
+	// Deletes a file for an organization. <br><b>Permission Required:</b> Delete Files.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
+	DeleteOrganizationFileWithResponse(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*DeleteOrganizationFileResponse, error)
+
 	// DeleteSmartSoftwareWithResponse Deletes a smart software item.
 	//
 	// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
@@ -3189,6 +3263,54 @@ func (r GetAvailableFactsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAvailableFactsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteOrganizationFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteOrganizationFileResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteOrganizationFileResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteOrganizationFileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteOrganizationFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteOrganizationFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteOrganizationFileResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3807,6 +3929,21 @@ func (c *ClientWithResponses) GetAvailableFactsWithResponse(ctx context.Context,
 	return ParseGetAvailableFactsResponse(rsp)
 }
 
+// DeleteOrganizationFileWithResponse Deletes an organization file.
+//
+// Deletes a file for an organization. <br><b>Permission Required:</b> Delete Files.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
+func (c *ClientWithResponses) DeleteOrganizationFileWithResponse(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*DeleteOrganizationFileResponse, error) {
+	rsp, err := c.DeleteOrganizationFile(ctx, organizationId, fileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteOrganizationFileResponse(rsp)
+}
+
 // DeleteSmartSoftwareWithResponse Deletes a smart software item.
 //
 // Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
@@ -4194,6 +4331,42 @@ func ParseGetAvailableFactsResponse(rsp *http.Response) (*GetAvailableFactsRespo
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteOrganizationFileResponse parses an HTTP response from a DeleteOrganizationFileWithResponse call
+func ParseDeleteOrganizationFileResponse(rsp *http.Response) (*DeleteOrganizationFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteOrganizationFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse

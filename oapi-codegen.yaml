@@ -28,3 +28,4 @@ output-options:
     - CreateSmartSoftwareNewVersion
     - DeleteSmartSoftware
     - GetTrackedFiles
+    - DeleteOrganizationFile

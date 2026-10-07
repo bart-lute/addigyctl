@@ -11,8 +11,9 @@ import (
 )
 
 type FilesCmd struct {
-	List FilesListCmd `cmd:"" help:"List every uploaded file and what uses it."`
-	Find FilesFindCmd `cmd:"" help:"Find uploaded files (e.g. a Smart Software installer) by MD5 hash or name."`
+	List   FilesListCmd   `cmd:"" help:"List every uploaded file and what uses it."`
+	Delete FilesDeleteCmd `cmd:"" help:"Delete uploaded files that nothing uses."`
+	Find   FilesFindCmd   `cmd:"" help:"Find uploaded files (e.g. a Smart Software installer) by MD5 hash or name."`
 }
 
 type FilesFindCmd struct {
@@ -87,46 +88,15 @@ func (c *FilesListCmd) Run(app *App) error {
 	if _, ok := fileSortMostFirst[col]; !ok {
 		return fmt.Errorf("unknown --sort column %q (use one of: created, size, uses, name)", col)
 	}
-	api, err := app.API()
+	all, err := allFileUses(app)
 	if err != nil {
 		return err
-	}
-	var files []addigy.File
-	q := addigy.FileQuery{PerPage: 100} // the endpoint's maximum
-	for q.Page = 1; ; q.Page++ {
-		pg, err := api.SearchFiles(app.Ctx, q)
-		if err != nil {
-			return err
-		}
-		files = append(files, pg.Items...)
-		if len(pg.Items) == 0 || q.Page >= pg.Metadata.PageCount {
-			break
-		}
-	}
-
-	byID := map[string][]addigy.FileUsage{}
-	if len(files) > 0 {
-		ids := make([]string, len(files))
-		for i, f := range files {
-			ids[i] = f.ID
-		}
-		usages, err := api.FileUsages(app.Ctx, ids)
-		if err != nil {
-			return err
-		}
-		for _, u := range usages {
-			byID[u.FileID] = append(byID[u.FileID], u)
-		}
 	}
 
 	needle := strings.ToLower(c.Name)
 	shown := []fileUses{}
-	for _, f := range files {
-		fu := fileUses{File: f, Usages: byID[f.ID]}
-		if fu.Usages == nil {
-			fu.Usages = []addigy.FileUsage{}
-		}
-		if c.Unused && len(fu.Usages) > 0 || !strings.Contains(strings.ToLower(f.Filename), needle) {
+	for _, fu := range all {
+		if c.Unused && len(fu.Usages) > 0 || !strings.Contains(strings.ToLower(fu.Filename), needle) {
 			continue
 		}
 		shown = append(shown, fu)
@@ -177,6 +147,57 @@ func (c *FilesListCmd) Run(app *App) error {
 	}
 	app.footer("%d files, %d unused (%s)", len(shown), unused, humanSize(unusedSize))
 	return nil
+}
+
+// allFileUses fetches every uploaded file and where each is used.
+func allFileUses(app *App) ([]fileUses, error) {
+	api, err := app.API()
+	if err != nil {
+		return nil, err
+	}
+	var files []addigy.File
+	q := addigy.FileQuery{PerPage: 100} // the endpoint's maximum
+	for q.Page = 1; ; q.Page++ {
+		pg, err := api.SearchFiles(app.Ctx, q)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, pg.Items...)
+		if len(pg.Items) == 0 || q.Page >= pg.Metadata.PageCount {
+			break
+		}
+	}
+	return withUsages(app, files)
+}
+
+// withUsages pairs files with where Addigy tracks them as used, in one call.
+func withUsages(app *App, files []addigy.File) ([]fileUses, error) {
+	byID := map[string][]addigy.FileUsage{}
+	if len(files) > 0 {
+		api, err := app.API()
+		if err != nil {
+			return nil, err
+		}
+		ids := make([]string, len(files))
+		for i, f := range files {
+			ids[i] = f.ID
+		}
+		usages, err := api.FileUsages(app.Ctx, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, u := range usages {
+			byID[u.FileID] = append(byID[u.FileID], u)
+		}
+	}
+	out := make([]fileUses, len(files))
+	for i, f := range files {
+		out[i] = fileUses{File: f, Usages: byID[f.ID]}
+		if out[i].Usages == nil {
+			out[i].Usages = []addigy.FileUsage{}
+		}
+	}
+	return out, nil
 }
 
 // fileSortMostFirst lists the --sort columns; true ones default to

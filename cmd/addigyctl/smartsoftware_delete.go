@@ -51,7 +51,7 @@ func (c *SmartSoftwareDeleteCmd) Run(app *App) error {
 
 	var backup string
 	if !c.NoBackup {
-		dir, err := c.backupDir(app)
+		dir, err := backupDir(app, c.BackupDir)
 		if err != nil {
 			return err
 		}
@@ -120,12 +120,12 @@ func (c *SmartSoftwareDeleteCmd) Run(app *App) error {
 	return nil
 }
 
-// backupDir is --backup-dir, else the config file's "backup_dir", else
-// "backups" in addigyctl's config directory.
-func (c *SmartSoftwareDeleteCmd) backupDir(app *App) (string, error) {
+// backupDir is the --backup-dir flag, else the config file's "backup_dir",
+// else "backups" in addigyctl's config directory.
+func backupDir(app *App, flag string) (string, error) {
 	switch {
-	case c.BackupDir != "":
-		return expandHome(c.BackupDir), nil
+	case flag != "":
+		return expandHome(flag), nil
 	case app.Cfg.BackupDir != "":
 		return expandHome(app.Cfg.BackupDir), nil
 	}
@@ -208,6 +208,12 @@ func writeBackup(path, orgID string, s *addigy.SmartSoftware, now time.Time) err
 		return err
 	}
 	buf.WriteByte('\n')
+	return writePrivate(path, buf.Bytes())
+}
+
+// writePrivate writes a new file only its owner can read, creating its
+// folder the same way. It never overwrites a file.
+func writePrivate(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -215,7 +221,7 @@ func writeBackup(path, orgID string, s *addigy.SmartSoftware, now time.Time) err
 	if err != nil {
 		return err
 	}
-	if _, err := f.Write(buf.Bytes()); err != nil {
+	if _, err := f.Write(data); err != nil {
 		f.Close()
 		return err
 	}
