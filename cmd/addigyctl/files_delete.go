@@ -85,6 +85,8 @@ func (c *FilesDeleteCmd) Run(app *App) error {
 		return nil
 	}
 
+	sortFileUses(chosen, "created", false) // oldest first, the easiest to review
+
 	preview := app.Out
 	if app.json() {
 		preview = app.Err

@@ -200,6 +200,15 @@ func TestFilesDeleteDryRun(t *testing.T) {
 	if got := out.String(); !strings.Contains(got, "Citrix-2.pkg") || !strings.Contains(got, "2 files, 5.0 KB") || !strings.Contains(got, "Dry run") {
 		t.Errorf("output:\n%s", got)
 	}
+	// Oldest first, whatever order Addigy returns them in.
+	fake.files[1], fake.files[2] = fake.files[2], fake.files[1]
+	out.Reset()
+	if err := (&FilesDeleteCmd{Unused: true, Name: "citrix", DryRun: true, BackupDir: dir}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); strings.Index(got, "citrix-1.pkg") > strings.Index(got, "Citrix-2.pkg") {
+		t.Errorf("preview not oldest first:\n%s", got)
+	}
 }
 
 func TestFilesDeleteCancelled(t *testing.T) {
