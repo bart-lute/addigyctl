@@ -1552,6 +1552,13 @@ type ClientInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteSmartSoftware Deletes a smart software item.
+	//
+	// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
+	//
+	// Corresponds with DELETE /o/{organization_id}/smart-software/{id} (the `DeleteSmartSoftware` operationId).
+	DeleteSmartSoftware(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetSmartSoftware Gets a smart software item.
 	//
 	// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
@@ -1772,6 +1779,23 @@ func (c *Client) GetDevicePolicyAssignments(ctx context.Context, organizationId 
 // Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAvailableFactsRequest(c.Server, organizationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteSmartSoftware Deletes a smart software item.
+//
+// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
+//
+// Corresponds with DELETE /o/{organization_id}/smart-software/{id} (the `DeleteSmartSoftware` operationId).
+func (c *Client) DeleteSmartSoftware(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteSmartSoftwareRequest(c.Server, organizationId, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2188,6 +2212,47 @@ func NewGetAvailableFactsRequest(server string, organizationId string) (*http.Re
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteSmartSoftwareRequest constructs an http.Request for the DeleteSmartSoftware method
+func NewDeleteSmartSoftwareRequest(server string, organizationId string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/smart-software/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2623,6 +2688,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /o/{organization_id}/facts (the `GetAvailableFacts` operationId).
 	GetAvailableFactsWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetAvailableFactsResponse, error)
 
+	// DeleteSmartSoftwareWithResponse Deletes a smart software item.
+	//
+	// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /o/{organization_id}/smart-software/{id} (the `DeleteSmartSoftware` operationId).
+	DeleteSmartSoftwareWithResponse(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*DeleteSmartSoftwareResponse, error)
+
 	// GetSmartSoftwareWithResponse Gets a smart software item.
 	//
 	// Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
@@ -2946,6 +3020,54 @@ func (r GetAvailableFactsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAvailableFactsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteSmartSoftwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteSmartSoftwareResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteSmartSoftwareResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteSmartSoftwareResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteSmartSoftwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteSmartSoftwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteSmartSoftwareResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3490,6 +3612,21 @@ func (c *ClientWithResponses) GetAvailableFactsWithResponse(ctx context.Context,
 	return ParseGetAvailableFactsResponse(rsp)
 }
 
+// DeleteSmartSoftwareWithResponse Deletes a smart software item.
+//
+// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /o/{organization_id}/smart-software/{id} (the `DeleteSmartSoftware` operationId).
+func (c *ClientWithResponses) DeleteSmartSoftwareWithResponse(ctx context.Context, organizationId string, id string, reqEditors ...RequestEditorFn) (*DeleteSmartSoftwareResponse, error) {
+	rsp, err := c.DeleteSmartSoftware(ctx, organizationId, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteSmartSoftwareResponse(rsp)
+}
+
 // GetSmartSoftwareWithResponse Gets a smart software item.
 //
 // Gets a smart software item by ID. <br> <br> <b>Permission Required:</b> View Smart Software.
@@ -3829,6 +3966,42 @@ func ParseGetAvailableFactsResponse(rsp *http.Response) (*GetAvailableFactsRespo
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteSmartSoftwareResponse parses an HTTP response from a DeleteSmartSoftwareWithResponse call
+func ParseDeleteSmartSoftwareResponse(rsp *http.Response) (*DeleteSmartSoftwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteSmartSoftwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse

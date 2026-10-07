@@ -20,6 +20,7 @@ type SmartSoftwareCmd struct {
 	Get        SmartSoftwareGetCmd        `cmd:"" help:"Show one Smart Software version as JSON."`
 	Export     SmartSoftwareExportCmd     `cmd:"" help:"Write a Smart Software item to an item folder (item.yaml plus scripts)."`
 	NewVersion SmartSoftwareNewVersionCmd `cmd:"" name:"new-version" help:"Publish a new version of an item from its item folder."`
+	Delete     SmartSoftwareDeleteCmd     `cmd:"" help:"Delete one Smart Software version, after backing it up."`
 }
 
 // ---- list -------------------------------------------------------------------

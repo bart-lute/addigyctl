@@ -693,6 +693,17 @@ func (a *API) NewSmartSoftwareVersion(ctx context.Context, orgID, instructionID 
 	return decodeSmartSoftware(resp.Body)
 }
 
+// DeleteSmartSoftware deletes one Smart Software version by its instruction ID
+// (DELETE /o/{organization_id}/smart-software/{id}). The files it downloads
+// stay in the organization's file storage.
+func (a *API) DeleteSmartSoftware(ctx context.Context, orgID, instructionID string) error {
+	resp, err := a.c.DeleteSmartSoftwareWithResponse(ctx, orgID, instructionID)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp.StatusCode(), resp.Body)
+}
+
 func decodeSmartSoftware(r json.RawMessage) (*SmartSoftware, error) {
 	var s SmartSoftware
 	if err := json.Unmarshal(r, &s); err != nil {

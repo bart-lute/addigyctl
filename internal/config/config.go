@@ -42,6 +42,9 @@ type File struct {
 	// SoftwareRoot is the folder holding Smart Software item folders, so
 	// --item <name> can stand for <SoftwareRoot>/<name>. "~" is expanded.
 	SoftwareRoot string `json:"software_root,omitempty"`
+	// BackupDir is where smart-software delete writes its backups. "~" is
+	// expanded. Defaults to <Dir>/backups.
+	BackupDir string `json:"backup_dir,omitempty"`
 }
 
 // Template is what `addigyctl config init` writes.

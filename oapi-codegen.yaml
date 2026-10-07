@@ -26,3 +26,4 @@ output-options:
     - GetOrganizationFiles
     - GetOrganizationFile
     - CreateSmartSoftwareNewVersion
+    - DeleteSmartSoftware

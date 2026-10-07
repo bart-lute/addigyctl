@@ -1,6 +1,6 @@
 # addigyctl
 
-A small command line tool for the [Addigy](https://addigy.com) v2 API of a single tenant. It queries devices, policies, facts, ADE tokens, alerts, system events and Smart Software, and it can publish new Smart Software versions from item folders kept as code (see [Smart Software](#smart-software)). Publishing is its only write operation; everything else is read-only.
+A small command line tool for the [Addigy](https://addigy.com) v2 API of a single tenant. It queries devices, policies, facts, ADE tokens, alerts, system events and Smart Software, and it can publish new Smart Software versions from item folders kept as code, and delete versions after backing them up (see [Smart Software](#smart-software)). Publishing and deleting are its only write operations; everything else is read-only.
 
 The API client is not written by hand: it is generated from the Swagger spec Addigy publishes, so the data types always match the API.
 
@@ -66,11 +66,12 @@ addigyctl config show     # effective configuration, API key redacted
   "timezone": "Europe/Amsterdam",
   "date_format": "dd-mm-yyyy hh:mm:ss",
   "borders": false,
-  "software_root": "~/src/addigy-software"
+  "software_root": "~/src/addigy-software",
+  "backup_dir": ""
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. `backup_dir` is where `smart-software delete` writes its backups; it defaults to `backups` next to the config file, and `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -81,7 +82,7 @@ addigyctl facts    list
 addigyctl ade      tokens
 addigyctl alerts   list
 addigyctl events   list
-addigyctl smart-software list | get | export | new-version
+addigyctl smart-software list | get | export | new-version | delete
 addigyctl files    find
 addigyctl config   path | init | show
 ```
@@ -186,6 +187,7 @@ addigyctl smart-software get Airtame           # latest version as JSON
 addigyctl smart-software export Airtame --placeholders   # → <software_root>/airtame
 addigyctl smart-software new-version Airtame --to 4.16.0 --dry-run   # finds Airtame-4.16.0.pkg itself
 addigyctl smart-software new-version Airtame --to 4.16.0
+addigyctl smart-software delete <instruction_id> --dry-run   # backs up, then deletes one version
 addigyctl files find --name Airtame-4.16       # look up uploads by name (loose search) or --md5
 ```
 
@@ -218,6 +220,12 @@ For automation, `--wait-for-files 2h` waits (checking every 30 seconds) for down
 
 A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.
 
+**Deleting.** `delete` removes one version, named by its `instruction_id` only (a name or `identifier` would mean whichever version is latest). The item's other versions stay, and so do its downloads in Addigy's file storage. It shows the version and its downloads and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The API key needs Addigy's "Delete Smart Software" permission.
+
+Before deleting, it writes a backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If the backup can't be written, nothing is deleted; if the delete fails, the backup is removed again. `--no-backup` skips it. There is no restore command yet.
+
+A version that is assigned to policies is deleted all the same: Addigy silently removes it from those policies, and the backup does not record them. The v2 API doesn't show these assignments reliably, so addigyctl can't check first; look in the Addigy UI before deleting a version that may be in use.
+
 ## Output formats
 
 | Flag                      | Output |
@@ -233,7 +241,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export` and `new-version` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` writes its change preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used); everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and `delete -j` write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used); everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 
