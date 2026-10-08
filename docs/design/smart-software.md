@@ -161,7 +161,7 @@ Operations to add to `include-operation-ids` in `oapi-codegen.yaml`:
 |---|---|---|
 | `GetSmartSoftwareItems` | `POST /oa/smart-software/query` | list, export, diff |
 | `GetSmartSoftware` | `GET /o/{organization_id}/smart-software/{id}` | get, export, diff |
-| `CreateSmartSoftware` | `POST /o/{organization_id}/smart-software` | (later: create from folder) |
+| `CreateSmartSoftware` | `POST /o/{organization_id}/smart-software` | restore (when no version of the item is left); later: create from folder |
 | `CreateSmartSoftwareNewVersion` | `POST /o/{organization_id}/smart-software/{id}/new-version` | new-version |
 | `DeleteSmartSoftware` | `DELETE /o/{organization_id}/smart-software/{id}` | delete (one version; needs the "Delete Smart Software" permission) |
 | `GetOrganizationFiles` | `POST /oa/files/query` (filters: `md5_hash`, `search_term`, `ids`) | files find |

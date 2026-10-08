@@ -26,6 +26,7 @@ output-options:
     - GetOrganizationFiles
     - GetOrganizationFile
     - CreateSmartSoftwareNewVersion
+    - CreateSmartSoftware
     - DeleteSmartSoftware
     - GetTrackedFiles
     - DeleteOrganizationFile

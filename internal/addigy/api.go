@@ -693,6 +693,21 @@ func (a *API) NewSmartSoftwareVersion(ctx context.Context, orgID, instructionID 
 	return decodeSmartSoftware(resp.Body)
 }
 
+// CreateSmartSoftware creates a new item
+// (POST /o/{organization_id}/smart-software). body is a
+// smart_software.CreateSmartSoftwareRequest; the response is the created
+// version.
+func (a *API) CreateSmartSoftware(ctx context.Context, orgID string, body json.RawMessage) (*SmartSoftware, error) {
+	resp, err := a.c.CreateSmartSoftwareWithBodyWithResponse(ctx, orgID, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	return decodeSmartSoftware(resp.Body)
+}
+
 // DeleteSmartSoftware deletes one Smart Software version by its instruction ID
 // (DELETE /o/{organization_id}/smart-software/{id}). The files it downloads
 // stay in the organization's file storage.

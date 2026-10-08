@@ -166,6 +166,24 @@ func (e PolicyServicePrebuiltAppSettingsPromptIntervalHours) Valid() bool {
 	}
 }
 
+// Defines values for SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped.
+const (
+	SmartSoftwareCreateSmartSoftwareRequestStatusOnSkippedFailed   SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped = "failed"
+	SmartSoftwareCreateSmartSoftwareRequestStatusOnSkippedFinished SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped = "finished"
+)
+
+// Valid indicates whether the value is a known member of the SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped enum.
+func (e SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped) Valid() bool {
+	switch e {
+	case SmartSoftwareCreateSmartSoftwareRequestStatusOnSkippedFailed:
+		return true
+	case SmartSoftwareCreateSmartSoftwareRequestStatusOnSkippedFinished:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SmartSoftwareSmartSoftwareQueryRequestSortDirection.
 const (
 	SmartSoftwareSmartSoftwareQueryRequestSortDirectionAsc  SmartSoftwareSmartSoftwareQueryRequestSortDirection = "asc"
@@ -196,6 +214,24 @@ func (e SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped) Valid() bool {
 	case SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFailed:
 		return true
 	case SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkippedFinished:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateSmartSoftwareJSONBodyStatusOnSkipped.
+const (
+	CreateSmartSoftwareJSONBodyStatusOnSkippedFailed   CreateSmartSoftwareJSONBodyStatusOnSkipped = "failed"
+	CreateSmartSoftwareJSONBodyStatusOnSkippedFinished CreateSmartSoftwareJSONBodyStatusOnSkipped = "finished"
+)
+
+// Valid indicates whether the value is a known member of the CreateSmartSoftwareJSONBodyStatusOnSkipped enum.
+func (e CreateSmartSoftwareJSONBodyStatusOnSkipped) Valid() bool {
+	switch e {
+	case CreateSmartSoftwareJSONBodyStatusOnSkippedFailed:
+		return true
+	case CreateSmartSoftwareJSONBodyStatusOnSkippedFinished:
 		return true
 	default:
 		return false
@@ -1171,6 +1207,55 @@ type ResponseEntitiesResponse struct {
 	Metadata *ResponseEntitiesMetadata `json:"metadata,omitempty"`
 }
 
+// SmartSoftwareCreateSmartSoftwareRequest defines model for smart_software.CreateSmartSoftwareRequest.
+type SmartSoftwareCreateSmartSoftwareRequest struct {
+	// Archived Example: false
+	Archived *bool `json:"archived,omitempty"`
+
+	// BaseIdentifier Example: zoom.us
+	BaseIdentifier string `json:"base_identifier"`
+
+	// Category Example: Productivity
+	Category *string `json:"category,omitempty"`
+
+	// Condition Example: ls /Applications/zoom.us.app
+	Condition *string `json:"condition,omitempty"`
+
+	// Description Example: Zoom is a video conferencing software
+	Description *string                  `json:"description,omitempty"`
+	Downloads   *[]SmartSoftwareDownload `json:"downloads,omitempty"`
+
+	// Identifier Example: Zoom
+	Identifier *string `json:"identifier,omitempty"`
+
+	// InstallationScript Example: /bin/installer -pkg /path/to/zoom.pkg -target /
+	InstallationScript   *string                                  `json:"installation_script,omitempty"`
+	PredefinedConditions *InstructionsServicePredefinedConditions `json:"predefined_conditions,omitempty"`
+
+	// Priority Example: 10
+	Priority *float32                      `json:"priority,omitempty"`
+	Profiles *[]InstructionsServiceProfile `json:"profiles,omitempty"`
+
+	// RemoveScript Example: rm -rf /Applications/zoom.us.app
+	RemoveScript *string `json:"remove_script,omitempty"`
+
+	// RunOnSuccess Example: true
+	RunOnSuccess *bool                                   `json:"run_on_success,omitempty"`
+	SoftwareIcon *InstructionsServiceSoftwareIconRequest `json:"software_icon,omitempty"`
+
+	// StatusOnSkipped Example: finished
+	StatusOnSkipped *SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped `json:"status_on_skipped,omitempty"`
+
+	// UserEmail Example: email@example.com
+	UserEmail *string `json:"user_email,omitempty"`
+
+	// Version Example: 1.0
+	Version string `json:"version"`
+}
+
+// SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped Example: finished
+type SmartSoftwareCreateSmartSoftwareRequestStatusOnSkipped string
+
 // SmartSoftwareDownload defines model for smart_software.Download.
 type SmartSoftwareDownload struct {
 	// Id Example: 00000000-1111-2222-aaaa-bbbbbbbbbbbb
@@ -1327,6 +1412,55 @@ type SystemEventsSearchRequestQuery struct {
 	ToDateTime *string `json:"to_date_time,omitempty"`
 }
 
+// CreateSmartSoftwareJSONBody defines parameters for CreateSmartSoftware.
+type CreateSmartSoftwareJSONBody struct {
+	// Archived Example: false
+	Archived *bool `json:"archived,omitempty"`
+
+	// BaseIdentifier Example: zoom.us
+	BaseIdentifier string `json:"base_identifier"`
+
+	// Category Example: Productivity
+	Category *string `json:"category,omitempty"`
+
+	// Condition Example: ls /Applications/zoom.us.app
+	Condition *string `json:"condition,omitempty"`
+
+	// Description Example: Zoom is a video conferencing software
+	Description *string                  `json:"description,omitempty"`
+	Downloads   *[]SmartSoftwareDownload `json:"downloads,omitempty"`
+
+	// Identifier Example: Zoom
+	Identifier *string `json:"identifier,omitempty"`
+
+	// InstallationScript Example: /bin/installer -pkg /path/to/zoom.pkg -target /
+	InstallationScript   *string                                  `json:"installation_script,omitempty"`
+	PredefinedConditions *InstructionsServicePredefinedConditions `json:"predefined_conditions,omitempty"`
+
+	// Priority Example: 10
+	Priority *float32                                 `json:"priority,omitempty"`
+	Profiles *[]InstructionsServiceExamplePPPCProfile `json:"profiles,omitempty"`
+
+	// RemoveScript Example: rm -rf /Applications/zoom.us.app
+	RemoveScript *string `json:"remove_script,omitempty"`
+
+	// RunOnSuccess Example: true
+	RunOnSuccess *bool                                   `json:"run_on_success,omitempty"`
+	SoftwareIcon *InstructionsServiceSoftwareIconRequest `json:"software_icon,omitempty"`
+
+	// StatusOnSkipped Example: finished
+	StatusOnSkipped *CreateSmartSoftwareJSONBodyStatusOnSkipped `json:"status_on_skipped,omitempty"`
+
+	// UserEmail Example: email@example.com
+	UserEmail *string `json:"user_email,omitempty"`
+
+	// Version Example: 1.0
+	Version string `json:"version"`
+}
+
+// CreateSmartSoftwareJSONBodyStatusOnSkipped defines parameters for CreateSmartSoftware.
+type CreateSmartSoftwareJSONBodyStatusOnSkipped string
+
 // CreateSmartSoftwareNewVersionJSONBody defines parameters for CreateSmartSoftwareNewVersion.
 type CreateSmartSoftwareNewVersionJSONBody struct {
 	// Archived Example: false
@@ -1427,6 +1561,9 @@ type GetSystemEventsJSONRequestBody = SystemEventsSearchRequestQuery
 
 // GetTrackedFilesJSONRequestBody defines body for GetTrackedFiles for application/json ContentType.
 type GetTrackedFilesJSONRequestBody = FileTrackEntitiesFilesTrackedRequest
+
+// CreateSmartSoftwareJSONRequestBody defines body for CreateSmartSoftware for application/json ContentType.
+type CreateSmartSoftwareJSONRequestBody CreateSmartSoftwareJSONBody
 
 // CreateSmartSoftwareNewVersionJSONRequestBody defines body for CreateSmartSoftwareNewVersion for application/json ContentType.
 type CreateSmartSoftwareNewVersionJSONRequestBody CreateSmartSoftwareNewVersionJSONBody
@@ -1591,6 +1728,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 	DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSmartSoftwareWithBody Creates a new smart software item.
+	//
+	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+	CreateSmartSoftwareWithBody(ctx context.Context, organizationId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSmartSoftware Creates a new smart software item.
+	//
+	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+	CreateSmartSoftware(ctx context.Context, organizationId string, body CreateSmartSoftwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteSmartSoftware Deletes a smart software item.
 	//
@@ -1870,6 +2025,44 @@ func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, r
 // Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 func (c *Client) DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteOrganizationFileRequest(c.Server, organizationId, fileId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSmartSoftwareWithBody Creates a new smart software item.
+//
+// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+func (c *Client) CreateSmartSoftwareWithBody(ctx context.Context, organizationId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSmartSoftwareRequestWithBody(c.Server, organizationId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSmartSoftware Creates a new smart software item.
+//
+// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+func (c *Client) CreateSmartSoftware(ctx context.Context, organizationId string, body CreateSmartSoftwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSmartSoftwareRequest(c.Server, organizationId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2391,6 +2584,53 @@ func NewDeleteOrganizationFileRequest(server string, organizationId string, file
 	return req, nil
 }
 
+// NewCreateSmartSoftwareRequest calls the generic CreateSmartSoftware builder with application/json body
+func NewCreateSmartSoftwareRequest(server string, organizationId string, body CreateSmartSoftwareJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSmartSoftwareRequestWithBody(server, organizationId, "application/json", bodyReader)
+}
+
+// NewCreateSmartSoftwareRequestWithBody constructs an http.Request for the CreateSmartSoftware method, with any body, and a specified content type
+func NewCreateSmartSoftwareRequestWithBody(server string, organizationId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/smart-software", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewDeleteSmartSoftwareRequest constructs an http.Request for the DeleteSmartSoftware method
 func NewDeleteSmartSoftwareRequest(server string, organizationId string, id string) (*http.Request, error) {
 	var err error
@@ -2883,6 +3123,24 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 	DeleteOrganizationFileWithResponse(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*DeleteOrganizationFileResponse, error)
 
+	// CreateSmartSoftwareWithBodyWithResponse Creates a new smart software item.
+	//
+	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+	CreateSmartSoftwareWithBodyWithResponse(ctx context.Context, organizationId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareResponse, error)
+
+	// CreateSmartSoftwareWithResponse Creates a new smart software item.
+	//
+	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+	CreateSmartSoftwareWithResponse(ctx context.Context, organizationId string, body CreateSmartSoftwareJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareResponse, error)
+
 	// DeleteSmartSoftwareWithResponse Deletes a smart software item.
 	//
 	// Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
@@ -3311,6 +3569,75 @@ func (r DeleteOrganizationFileResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r DeleteOrganizationFileResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateSmartSoftwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InstructionsServiceCustomSoftware
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ResponseEntitiesErrorResponse
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r CreateSmartSoftwareResponse) GetJSON200() *InstructionsServiceCustomSoftware {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateSmartSoftwareResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateSmartSoftwareResponse) GetJSON403() *ResponseEntitiesErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateSmartSoftwareResponse) GetJSON409() *ResponseEntitiesErrorResponse {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateSmartSoftwareResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSmartSoftwareResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSmartSoftwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSmartSoftwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSmartSoftwareResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3944,6 +4271,36 @@ func (c *ClientWithResponses) DeleteOrganizationFileWithResponse(ctx context.Con
 	return ParseDeleteOrganizationFileResponse(rsp)
 }
 
+// CreateSmartSoftwareWithBodyWithResponse Creates a new smart software item.
+//
+// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+func (c *ClientWithResponses) CreateSmartSoftwareWithBodyWithResponse(ctx context.Context, organizationId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareResponse, error) {
+	rsp, err := c.CreateSmartSoftwareWithBody(ctx, organizationId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSmartSoftwareResponse(rsp)
+}
+
+// CreateSmartSoftwareWithResponse Creates a new smart software item.
+//
+// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /o/{organization_id}/smart-software (the `CreateSmartSoftware` operationId).
+func (c *ClientWithResponses) CreateSmartSoftwareWithResponse(ctx context.Context, organizationId string, body CreateSmartSoftwareJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSmartSoftwareResponse, error) {
+	rsp, err := c.CreateSmartSoftware(ctx, organizationId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSmartSoftwareResponse(rsp)
+}
+
 // DeleteSmartSoftwareWithResponse Deletes a smart software item.
 //
 // Deletes a smart software item by ID. <br> <br> <b>Permission Required:</b> Delete Smart Software.
@@ -4367,6 +4724,60 @@ func ParseDeleteOrganizationFileResponse(rsp *http.Response) (*DeleteOrganizatio
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSmartSoftwareResponse parses an HTTP response from a CreateSmartSoftwareWithResponse call
+func ParseCreateSmartSoftwareResponse(rsp *http.Response) (*CreateSmartSoftwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSmartSoftwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InstructionsServiceCustomSoftware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse

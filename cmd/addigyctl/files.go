@@ -151,21 +151,9 @@ func (c *FilesListCmd) Run(app *App) error {
 
 // allFileUses fetches every uploaded file and where each is used.
 func allFileUses(app *App) ([]fileUses, error) {
-	api, err := app.API()
+	files, err := allFiles(app, addigy.FileQuery{})
 	if err != nil {
 		return nil, err
-	}
-	var files []addigy.File
-	q := addigy.FileQuery{PerPage: 100} // the endpoint's maximum
-	for q.Page = 1; ; q.Page++ {
-		pg, err := api.SearchFiles(app.Ctx, q)
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, pg.Items...)
-		if len(pg.Items) == 0 || q.Page >= pg.Metadata.PageCount {
-			break
-		}
 	}
 	return withUsages(app, files)
 }

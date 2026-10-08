@@ -82,7 +82,7 @@ addigyctl facts    list
 addigyctl ade      tokens
 addigyctl alerts   list
 addigyctl events   list
-addigyctl smart-software list | get | export | new-version | delete
+addigyctl smart-software list | get | export | new-version | delete | backups | restore
 addigyctl files    list | find | delete
 addigyctl config   path | init | show
 ```
@@ -189,6 +189,8 @@ addigyctl smart-software new-version Airtame --to 4.16.0 --dry-run   # finds Air
 addigyctl smart-software new-version Airtame --to 4.16.0
 addigyctl smart-software delete <instruction_id> [<instruction_id> ...] --dry-run   # backs up, then deletes
 addigyctl smart-software delete --archived --name zoom   # every archived version of the matching items
+addigyctl smart-software backups               # what delete backed up, and what can be restored
+addigyctl smart-software restore <instruction_id> --dry-run   # bring a deleted version back, archived
 addigyctl files find --name Airtame-4.16       # look up uploads by name (loose search) or --md5
 ```
 
@@ -223,9 +225,13 @@ A new version does nothing until it is assigned to policies, which addigyctl doe
 
 **Deleting.** `delete` removes versions, named by their `instruction_id` only (a name or `identifier` would mean whichever version is latest), or picked with `--archived --name <text>`: every archived version of the items whose name contains the text (`--name` is required, so it never means every archived version at once). The items' other versions stay, and so do their downloads in Addigy's file storage (`files list --unused` shows the ones nothing uses any more). It fetches every version first, so an unknown ID stops it with nothing deleted, then shows them (oldest first per item) with their downloads and asks for confirmation once (`--dry-run` only shows them; `--yes` skips the question; without a terminal it refuses rather than ask). A failed delete doesn't stop the others; they are all reported at the end. The API key needs Addigy's "Delete Smart Software" permission; a refusal of the key itself (401 or 403) stops the run.
 
-Before deleting a version, it writes its backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If a backup can't be written, that version and the ones after it are not deleted; if a delete fails, its backup is removed again. `--no-backup` skips the backups. There is no restore command yet.
+Before deleting a version, it writes its backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If a backup can't be written, that version and the ones after it are not deleted; if a delete fails, its backup is removed again. `--no-backup` skips the backups.
 
 A version that is assigned to policies is deleted all the same: Addigy silently removes it from those policies, and the backup does not record them. The v2 API doesn't show these assignments reliably, so addigyctl can't check first; look in the Addigy UI before deleting a version that may be in use.
+
+**Restoring.** `backups` lists the backups in `backup_dir` with the deleted version's `instruction_id` and a status: `ready to restore`; `needs upload: <files>` when a download or uploaded icon has since been deleted (see below); `already in Addigy` when the version exists again; or `other organization`. `-o csv` adds each backup's path.
+
+`restore` takes those IDs (the newest backup of an ID if there are several), or backup file paths, and brings the versions back **archived**: with a new `instruction_id` and no policy assignments, as the backup doesn't record them. A version goes next to the item's other versions, or becomes a new item when none is left. It checks every backup first and restores nothing if one can't be restored. Files are found by their old ID, or else by MD5: a deleted file uploaded again with the same content is used in its place. A file that is gone for good has to be uploaded again from elsewhere first, which is why it's best to delete versions some days before their files (`files delete --unused`). It shows what it will restore and asks for confirmation (`--dry-run`, `--yes`); the API key needs Addigy's "Create Smart Software" permission.
 
 ### Files
 
@@ -259,7 +265,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version` and `delete`, and `files delete` print a summary, or with `-j` a stable JSON result for scripts (`new-version -j` and both `delete -j`s write their preview to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version`, `delete` and `restore`, and `files delete` print a summary, or with `-j` a stable JSON result for scripts (their previews then go to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 
