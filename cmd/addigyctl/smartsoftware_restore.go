@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,6 +42,7 @@ type restorePlan struct {
 	Icon      *restoreFile // an uploaded icon; nil for none or a web icon
 	Target    string       // instruction ID of a version to add it next to; empty creates the item
 	TargetVer string
+	Item      string // with Target: the item's identifier, which a recreated item has new
 }
 
 // restoreFile is a file the backed-up version used, and the upload that
@@ -66,12 +68,20 @@ func (c *SmartSoftwareRestoreCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
+	dir, err := backupDir(app, c.BackupDir)
+	if err != nil {
+		return err
+	}
+	renamed, err := readRestoredItems(dir)
+	if err != nil {
+		return err
+	}
 	// Check every backup before restoring any.
 	var plans []*restorePlan
 	var problems []string
 	seen := map[string]string{} // identifier + version -> backup
 	for _, path := range paths {
-		p, err := planRestore(app, api, org, path)
+		p, err := planRestore(app, api, org, path, renamed)
 		if err != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", path, err))
 			continue
@@ -122,20 +132,31 @@ func (c *SmartSoftwareRestoreCmd) Run(app *App) error {
 		}
 	}
 
-	created := map[string]string{} // backed-up identifier -> a version created for it in this run
+	created := map[string]*addigy.SmartSoftware{} // backed-up identifier -> a version created for it in this run
 	var restored int
 	for i, p := range plans {
 		r := &result.Versions[i]
 		target := p.Target
-		if target == "" {
-			target = created[p.Version.Identifier]
+		if c, ok := created[p.Version.Identifier]; ok && target == "" {
+			target = c.InstructionID
+			p.Body["identifier"] = c.Identifier
 		}
 		s, err := restoreVersion(app, api, org, p, target)
 		if err == nil {
 			restored++
 			r.Restored, r.InstructionID, r.Archived = true, s.InstructionID, s.Archived
 			r.Identifier = s.Identifier
-			created[p.Version.Identifier] = s.InstructionID
+			if target == "" {
+				created[p.Version.Identifier] = s
+				// Addigy gave the recreated item a new identifier: remember
+				// it, so a later restore of another of its versions joins it.
+				if s.Identifier != p.Version.Identifier {
+					renamed[p.Version.Identifier] = s.Identifier
+					if err := writeRestoredItems(dir, renamed); err != nil {
+						fmt.Fprintf(app.Err, "warning: could not record %s's new identifier %s: %v\n", p.Version.Identifier, s.Identifier, err)
+					}
+				}
+			}
 			if !s.Archived {
 				fmt.Fprintf(app.Err, "warning: Addigy did not keep %s %s archived; archive it in the Addigy UI.\n", s.BaseIdentifier, swVersion(*s))
 			}
@@ -164,7 +185,7 @@ func (c *SmartSoftwareRestoreCmd) Run(app *App) error {
 		fmt.Fprintln(app.Out)
 		for _, r := range result.Versions {
 			if r.Restored {
-				fmt.Fprintf(app.Out, "Restored %s %s (instruction_id %s).\n", r.Name, r.Version, r.InstructionID)
+				fmt.Fprintf(app.Out, "Restored %s %s (instruction_id %s, item %s).\n", r.Name, r.Version, r.InstructionID, r.Identifier)
 			}
 		}
 		if len(plans) > 1 {
@@ -318,7 +339,7 @@ func (f neededFile) String() string {
 
 // planRestore reads a backup and checks it against Addigy: the organization,
 // that the version doesn't exist (any more), and that its files are there.
-func planRestore(app *App, api *addigy.API, org, path string) (*restorePlan, error) {
+func planRestore(app *App, api *addigy.API, org, path string, renamed map[string]string) (*restorePlan, error) {
 	b, err := readBackup(path)
 	if err != nil {
 		return nil, err
@@ -334,20 +355,31 @@ func planRestore(app *App, api *addigy.API, org, path string) (*restorePlan, err
 		}
 	}
 
-	versions, err := allSmartSoftware(app, addigy.SmartSoftwareQuery{Identifier: s.Identifier})
-	if err != nil {
-		return nil, err
+	// The item, or the item an earlier restore recreated it as: Addigy gives
+	// a recreated item a new identifier. The first of them with versions
+	// left takes this one.
+	for _, id := range identifierChain(s.Identifier, renamed) {
+		versions, err := allSmartSoftware(app, addigy.SmartSoftwareQuery{Identifier: id})
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range versions {
+			if v.Identifier != id {
+				continue
+			}
+			if swVersion(v) == swVersion(s) {
+				return nil, fmt.Errorf("%s %s is already in Addigy (instruction_id %s)", s.BaseIdentifier, swVersion(s), v.InstructionID)
+			}
+			if p.Item != "" && p.Item != id {
+				continue
+			}
+			if p.Target == "" || cmpVersion(swVersion(v), p.TargetVer) > 0 {
+				p.Target, p.TargetVer, p.Item = v.InstructionID, swVersion(v), id
+			}
+		}
 	}
-	for _, v := range versions {
-		if v.Identifier != s.Identifier {
-			continue
-		}
-		if swVersion(v) == swVersion(s) {
-			return nil, fmt.Errorf("%s %s is already in Addigy (instruction_id %s)", s.BaseIdentifier, swVersion(s), v.InstructionID)
-		}
-		if p.Target == "" || cmpVersion(swVersion(v), p.TargetVer) > 0 {
-			p.Target, p.TargetVer = v.InstructionID, swVersion(v)
-		}
+	if p.Item != "" {
+		p.Body["identifier"] = p.Item
 	}
 
 	var missing []string
@@ -435,10 +467,15 @@ func restoreVersion(app *App, api *addigy.API, org string, p *restorePlan, targe
 
 func printRestorePreview(w io.Writer, p *restorePlan) {
 	fmt.Fprintf(w, "Restore %s %s from %s\n", p.Version.BaseIdentifier, swVersion(p.Version), p.Path)
-	if p.Target != "" {
-		fmt.Fprintf(w, "  as:         a new version of %s, next to %s\n", p.Version.Identifier, p.TargetVer)
-	} else {
+	switch {
+	case p.Target == "":
 		fmt.Fprintf(w, "  as:         a new item; no version of %s is left\n", p.Version.Identifier)
+		fmt.Fprintln(w, "              (Addigy gives it a new identifier; later restores of this item join it)")
+	case p.Item != p.Version.Identifier:
+		fmt.Fprintf(w, "  as:         a new version of %s, next to %s\n", p.Item, p.TargetVer)
+		fmt.Fprintf(w, "              (the item %s was restored as earlier)\n", p.Version.Identifier)
+	default:
+		fmt.Fprintf(w, "  as:         a new version of %s, next to %s\n", p.Item, p.TargetVer)
 	}
 	if len(p.Downloads) == 0 {
 		fmt.Fprintln(w, "  downloads:  none")
@@ -458,6 +495,56 @@ func reuploadNote(f restoreFile) string {
 		return fmt.Sprintf("  (uploaded again; was %s)", f.OldID)
 	}
 	return ""
+}
+
+// restoredItemsFile, in the backup folder, records the identifier of each
+// item restore recreated: Addigy gives a recreated item a new one.
+const restoredItemsFile = "restored-items.json"
+
+type restoredItems struct {
+	Format int               `json:"addigyctl_restored_items"`
+	Items  map[string]string `json:"items"` // backed-up identifier -> the recreated item's identifier
+}
+
+func readRestoredItems(dir string) (map[string]string, error) {
+	data, err := os.ReadFile(filepath.Join(dir, restoredItemsFile))
+	if errors.Is(err, fs.ErrNotExist) {
+		return map[string]string{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var r restoredItems
+	if err := json.Unmarshal(data, &r); err != nil {
+		return nil, fmt.Errorf("reading %s: %w", filepath.Join(dir, restoredItemsFile), err)
+	}
+	if r.Items == nil {
+		r.Items = map[string]string{}
+	}
+	return r.Items, nil
+}
+
+func writeRestoredItems(dir string, items map[string]string) error {
+	b, err := json.MarshalIndent(restoredItems{Format: 1, Items: items}, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, restoredItemsFile), append(b, '\n'), 0o600)
+}
+
+// identifierChain is id followed by the identifiers it was recreated as, in
+// order: an item can be deleted and restored more than once.
+func identifierChain(id string, renamed map[string]string) []string {
+	chain := []string{id}
+	seen := map[string]bool{id: true}
+	for next, ok := renamed[id]; ok && !seen[next]; next, ok = renamed[next] {
+		chain = append(chain, next)
+		seen[next] = true
+	}
+	return chain
 }
 
 type restoreResult struct {

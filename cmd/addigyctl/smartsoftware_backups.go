@@ -44,6 +44,10 @@ func (c *SmartSoftwareBackupsCmd) Run(app *App) error {
 		}
 	}
 
+	renamed, err := readRestoredItems(dir)
+	if err != nil {
+		return err
+	}
 	entries := []backupEntry{}
 	if len(backups) > 0 {
 		// Two requests in all, however many backups: every file and every
@@ -74,7 +78,7 @@ func (c *SmartSoftwareBackupsCmd) Run(app *App) error {
 			switch {
 			case b.OrganizationID != org:
 				e.Status = "other-organization"
-			case exists[b.Version.Identifier+"\x00"+e.Version]:
+			case slices.ContainsFunc(identifierChain(b.Version.Identifier, renamed), func(id string) bool { return exists[id+"\x00"+e.Version] }):
 				e.Status = "in-addigy"
 			default:
 				for _, n := range b.neededFiles() {

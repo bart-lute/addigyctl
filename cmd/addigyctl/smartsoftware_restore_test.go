@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
+	"github.com/ginkio/addigyctl/internal/config"
 )
 
 // restoreFake serves an item's remaining versions, uploaded files (GET by
@@ -154,9 +155,11 @@ func setupRestore(t *testing.T) (*restoreFake, *App, *bytes.Buffer, string) {
 	srv := httptest.NewServer(fake.serve(t))
 	t.Cleanup(srv.Close)
 	var out bytes.Buffer
-	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k", BaseURL: srv.URL + "/api/v2"},
+	dir := t.TempDir()
+	// Restore reads and writes the backup folder: keep it out of the user's.
+	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k", BaseURL: srv.URL + "/api/v2"}, Cfg: config.File{BackupDir: dir},
 		In: strings.NewReader(""), Out: &out, Err: &bytes.Buffer{}}
-	return fake, app, &out, t.TempDir()
+	return fake, app, &out, dir
 }
 
 func TestRestoreAsNewVersion(t *testing.T) {
@@ -186,7 +189,7 @@ func TestRestoreAsNewVersion(t *testing.T) {
 			t.Errorf("server-managed field %q sent", k)
 		}
 	}
-	if !strings.Contains(out.String(), "Restored Xelion 9.7.0.0 (instruction_id r1)") {
+	if !strings.Contains(out.String(), "Restored Xelion 9.7.0.0 (instruction_id r1, item Xelion-u1)") {
 		t.Errorf("output:\n%s", out)
 	}
 	if w := app.Err.(*bytes.Buffer).String(); strings.Contains(w, "warning") {
@@ -351,6 +354,53 @@ func TestBackupsList(t *testing.T) {
 	for _, w := range []string{"ready to restore", "needs upload: Xelion-9.5.0.0.dmg", "already in Addigy", "other organization", "4 backups in", "1 ready to restore"} {
 		if !strings.Contains(out.String(), w) {
 			t.Errorf("table lacks %q:\n%s", w, out)
+		}
+	}
+}
+
+func TestRestoreFollowsRecreatedItem(t *testing.T) {
+	fake, app, out, dir := setupRestore(t)
+	fake.versions = nil // every version of the item is gone
+	p1 := writeTestBackup(t, dir, "o1", "9.6.0.0")
+	p2 := writeTestBackup(t, dir, "o1", "9.7.0.0")
+
+	// One run recreates the item: Addigy gives it a new identifier...
+	if err := (&SmartSoftwareRestoreCmd{Refs: []string{p1}, Yes: true}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := readRestoredItems(dir); got["Xelion-u1"] != "Xelion-new1" {
+		t.Fatalf("recorded %v", got)
+	}
+	if st, _ := os.Stat(filepath.Join(dir, restoredItemsFile)); st.Mode().Perm() != 0o600 {
+		t.Errorf("%s mode %v, want 0600", restoredItemsFile, st.Mode())
+	}
+
+	// ...and a later run adds the next version to that item, not a new one.
+	out.Reset()
+	if err := (&SmartSoftwareRestoreCmd{Refs: []string{p2}, Yes: true}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.created) != 1 || len(fake.newVersions) != 1 || fake.nvPaths[0] != "/api/v2/o/o1/smart-software/r1/new-version" {
+		t.Fatalf("created %d, new versions %v", len(fake.created), fake.nvPaths)
+	}
+	if fake.newVersions[0]["identifier"] != "Xelion-new1" {
+		t.Errorf("identifier sent = %v, want the recreated item's", fake.newVersions[0]["identifier"])
+	}
+	if !strings.Contains(out.String(), "(the item Xelion-u1 was restored as earlier)") {
+		t.Errorf("output:\n%s", out)
+	}
+
+	// backups sees the version in the recreated item as back in Addigy.
+	out.Reset()
+	app.G.Output = "json"
+	if err := (&SmartSoftwareBackupsCmd{}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	var entries []backupEntry
+	json.Unmarshal(out.Bytes(), &entries)
+	for _, e := range entries {
+		if e.Status != "in-addigy" {
+			t.Errorf("%s: status %s, want in-addigy", e.Version, e.Status)
 		}
 	}
 }
