@@ -106,7 +106,8 @@ func (c *FilesDeleteCmd) Run(app *App) error {
 		return nil
 	}
 	if !c.Yes {
-		fmt.Fprintln(app.Err, "The API can't recover deleted files, and addigyctl can't download them first.")
+		fmt.Fprintln(app.Err, "The API can't recover deleted files or download them first. If you might need one again,")
+		fmt.Fprintln(app.Err, "download it from the Addigy web UI (Catalog → Resources → Files) before deleting it.")
 		ok, err := app.confirm(fmt.Sprintf("Delete %s?", plural(len(chosen), "file")))
 		if err != nil {
 			return err
