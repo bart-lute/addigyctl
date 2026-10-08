@@ -66,10 +66,11 @@ func (c *FilesFindCmd) Run(app *App) error {
 // ---- list -------------------------------------------------------------------
 
 type FilesListCmd struct {
-	Unused bool   `help:"Only files nothing uses: candidates for cleaning up."`
-	Name   string `help:"Only files whose name contains this text (case-insensitive)."`
-	Sort   string `help:"Column to sort by: created (default, newest first), size (largest first), uses (most first) or name (A-Z)."`
-	Desc   bool   `help:"Reverse the column's default order."`
+	Unused       bool   `help:"Only files nothing uses: candidates for cleaning up."`
+	ArchivedOnly bool   `name:"archived-only" help:"Only files used by archived Smart Software versions and nothing else: candidates for cleaning up once those versions are deleted."`
+	Name         string `help:"Only files whose name contains this text (case-insensitive)."`
+	Sort         string `help:"Column to sort by: created (default, newest first), size (largest first), uses (most first) or name (A-Z)."`
+	Desc         bool   `help:"Reverse the column's default order."`
 }
 
 // fileUses is a file with the places Addigy tracks it as used: Smart Software
@@ -78,6 +79,9 @@ type FilesListCmd struct {
 type fileUses struct {
 	addigy.File
 	Usages []addigy.FileUsage `json:"usages"`
+	// ArchivedOnly: every use is an archived Smart Software version. Set by
+	// files list only.
+	ArchivedOnly bool `json:"archived_only"`
 }
 
 func (c *FilesListCmd) Run(app *App) error {
@@ -88,15 +92,21 @@ func (c *FilesListCmd) Run(app *App) error {
 	if _, ok := fileSortMostFirst[col]; !ok {
 		return fmt.Errorf("unknown --sort column %q (use one of: created, size, uses, name)", col)
 	}
+	if c.Unused && c.ArchivedOnly {
+		return errors.New("--unused and --archived-only cannot be combined: a file is one or the other")
+	}
 	all, err := allFileUses(app)
 	if err != nil {
+		return err
+	}
+	if err := markArchivedOnly(app, all); err != nil {
 		return err
 	}
 
 	needle := strings.ToLower(c.Name)
 	shown := []fileUses{}
 	for _, fu := range all {
-		if c.Unused && len(fu.Usages) > 0 || !strings.Contains(strings.ToLower(fu.Filename), needle) {
+		if c.Unused && len(fu.Usages) > 0 || c.ArchivedOnly && !fu.ArchivedOnly || !strings.Contains(strings.ToLower(fu.Filename), needle) {
 			continue
 		}
 		shown = append(shown, fu)
@@ -110,15 +120,22 @@ func (c *FilesListCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	var unused int
-	var unusedSize int64
+	var unused, archived int
+	var unusedSize, archivedSize int64
 	rows := make([][]string, 0, len(shown))
 	for _, f := range shown {
 		if len(f.Usages) == 0 {
 			unused++
 			unusedSize += f.Size
 		}
+		if f.ArchivedOnly {
+			archived++
+			archivedSize += f.Size
+		}
 		id, name, usedBy := f.ID, f.Filename, fileUsedBy(f.Usages)
+		if f.ArchivedOnly && !app.csv() {
+			usedBy = "archived only: " + usedBy
+		}
 		var size any = f.Size
 		// Files from before 2020 can have IDs of hundreds of characters;
 		// CSV and JSON keep them whole.
@@ -132,8 +149,14 @@ func (c *FilesListCmd) Run(app *App) error {
 			app.cell(id), app.cell(name), app.cell(size), app.cell(style.DateTime(f.Created)),
 			app.cell(fmt.Sprint(len(f.Usages))), app.cell(usedBy),
 		})
+		if app.csv() {
+			rows[len(rows)-1] = append(rows[len(rows)-1], fmt.Sprint(f.ArchivedOnly))
+		}
 	}
 	headers := []string{"ID", "FILENAME", "SIZE", "CREATED", "USES", "USED BY"}
+	if app.csv() {
+		headers = append(headers, "ARCHIVED ONLY")
+	}
 	// With --unused the usage columns say nothing; CSV keeps them so its
 	// columns never change.
 	if c.Unused && !app.csv() {
@@ -145,7 +168,30 @@ func (c *FilesListCmd) Run(app *App) error {
 	if err := output.Rows(app.Out, app.Format(), headers, rows, app.borders()); err != nil {
 		return err
 	}
-	app.footer("%d files, %d unused (%s)", len(shown), unused, humanSize(unusedSize))
+	app.footer("%d files, %d unused (%s), %d used only by archived versions (%s)", len(shown), unused, humanSize(unusedSize), archived, humanSize(archivedSize))
+	return nil
+}
+
+// markArchivedOnly sets ArchivedOnly on the files whose every use is an
+// archived Smart Software version (a download or uploaded icon of it).
+func markArchivedOnly(app *App, files []fileUses) error {
+	versions, err := allSmartSoftware(app, addigy.SmartSoftwareQuery{}) // archived and active
+	if err != nil {
+		return err
+	}
+	archived := map[string]bool{} // instruction ID -> archived
+	for _, v := range versions {
+		archived[v.InstructionID] = v.Archived
+	}
+	for i, f := range files {
+		files[i].ArchivedOnly = len(f.Usages) > 0
+		for _, u := range f.Usages {
+			if u.FeatureType != "ansible-custom-software" || !archived[u.ItemID] {
+				files[i].ArchivedOnly = false
+				break
+			}
+		}
+	}
 	return nil
 }
 
