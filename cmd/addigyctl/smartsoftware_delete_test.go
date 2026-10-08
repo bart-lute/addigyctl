@@ -24,6 +24,7 @@ const (
 	idQGIS338 = "11111111-2222-3333-4444-000000000338" // QGIS 3.38.0, archived
 	idQGIS336 = "11111111-2222-3333-4444-000000000336" // QGIS 3.36.0, archived
 	idZoom    = "11111111-2222-3333-4444-0000000000a0" // Zoom 6.0.0, archived
+	idQGISLTR = "11111111-2222-3333-4444-0000000000b0" // QGIS LTR 3.40.6, archived
 	idUnknown = "99999999-2222-3333-4444-555555555555"
 )
 
@@ -50,6 +51,7 @@ func setupDelete(t *testing.T, in string) (*App, *bytes.Buffer, *deleteFake, str
 		idQGIS338: swFixture(idQGIS338, "QGIS", "3.38.0", true),
 		idQGIS336: swFixture(idQGIS336, "QGIS", "3.36.0", true),
 		idZoom:    swFixture(idZoom, "Zoom", "6.0.0", true),
+		idQGISLTR: swFixture(idQGISLTR, "QGIS LTR", "3.40.6", true),
 	}, fail: map[string]int{}}
 	const swPath = "/api/v2/o/o1/smart-software/"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -263,11 +265,11 @@ func TestDeleteArchived(t *testing.T) {
 	if err := (&SmartSoftwareDeleteCmd{Archived: true, Name: "qgis", Yes: true, BackupDir: dir}).Run(app); err != nil {
 		t.Fatal(err)
 	}
-	// Not the active 3.40.1, and not Zoom.
-	if !slices.Equal(fake.deleted, []string{idQGIS336, idQGIS338}) {
+	// Not the active 3.40.1, and not Zoom; QGIS LTR's name contains "qgis".
+	if !slices.Equal(fake.deleted, []string{idQGIS336, idQGIS338, idQGISLTR}) {
 		t.Errorf("deleted %v", fake.deleted)
 	}
-	if !strings.Contains(out.String(), "Deleted 2 of 2 versions.") {
+	if !strings.Contains(out.String(), "Deleted 3 of 3 versions.") {
 		t.Errorf("output:\n%s", out)
 	}
 
@@ -356,5 +358,36 @@ func TestBackupPath(t *testing.T) {
 	s := &addigy.SmartSoftware{BaseIdentifier: "Microsoft Teams", Version: "25.1 (beta)", InstructionID: "i1"}
 	if p := backupPath("/b", s, now); p != "/b/microsoft-teams/25.1-beta-i1-20261007T143000Z.json" {
 		t.Errorf("backupPath = %q", p)
+	}
+}
+
+func TestDeleteArchivedExact(t *testing.T) {
+	app, _, fake, dir := setupDelete(t, "")
+	if err := (&SmartSoftwareDeleteCmd{Archived: true, Name: "qgis", Exact: true, Yes: true, BackupDir: dir}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(fake.deleted, []string{idQGIS336, idQGIS338}) {
+		t.Errorf("deleted %v; --exact should leave QGIS LTR alone", fake.deleted)
+	}
+
+	app, out, fake, dir := setupDelete(t, "")
+	if err := (&SmartSoftwareDeleteCmd{Archived: true, Name: "QGIS LTR", Exact: true, Yes: true, BackupDir: dir}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(fake.deleted, []string{idQGISLTR}) {
+		t.Errorf("deleted %v", fake.deleted)
+	}
+	out.Reset()
+	if err := (&SmartSoftwareDeleteCmd{Archived: true, Name: "qgi", Exact: true, Yes: true, BackupDir: dir}).Run(app); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), `No archived versions of items named "qgi"`) {
+		t.Errorf("output: %s", out)
+	}
+
+	for _, c := range []SmartSoftwareDeleteCmd{{Archived: true, Exact: true}, {Exact: true, IDs: []string{idDelete}}} {
+		if err := c.Run(&App{G: &Globals{}}); err == nil {
+			t.Errorf("%+v: expected an error", c)
+		}
 	}
 }

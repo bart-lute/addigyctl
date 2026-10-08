@@ -25,6 +25,7 @@ type SmartSoftwareDeleteCmd struct {
 	IDs       []string `arg:"" optional:"" name:"instruction-id" help:"Version IDs (instruction_id) of the versions to delete, as smart-software list shows them."`
 	Archived  bool     `help:"Delete the archived versions of the items whose name contains --name (required)."`
 	Name      string   `help:"With --archived: only items whose name contains this text (case-insensitive)."`
+	Exact     bool     `help:"With --name: only items named exactly that (case-insensitive), e.g. QGIS but not QGIS LTR."`
 	DryRun    bool     `name:"dry-run" help:"Show what would be deleted and where the backups would go, without doing either."`
 	Yes       bool     `help:"Delete without asking for confirmation."`
 	NoBackup  bool     `name:"no-backup" help:"Delete without writing backups first."`
@@ -36,12 +37,14 @@ func (c *SmartSoftwareDeleteCmd) Run(app *App) error {
 		return err
 	}
 	switch {
-	case len(c.IDs) > 0 && (c.Archived || c.Name != ""):
+	case len(c.IDs) > 0 && (c.Archived || c.Name != "" || c.Exact):
 		return errors.New("give version IDs or --archived, not both")
 	case len(c.IDs) == 0 && !c.Archived:
 		return errors.New("give the version IDs (instruction_id) to delete, or --archived with --name")
 	case c.Archived && c.Name == "":
 		return errors.New("--archived needs --name, so it never means every archived version at once")
+	case c.Exact && c.Name == "":
+		return errors.New("--exact goes with --name")
 	}
 	// Only exact versions: a name or identifier resolves to whichever
 	// version is latest, too easy to get wrong for a delete.
@@ -97,7 +100,11 @@ func (c *SmartSoftwareDeleteCmd) Run(app *App) error {
 		if app.json() {
 			return output.JSON(app.Out, deleteResult{DryRun: c.DryRun, Versions: []deletedVersion{}})
 		}
-		fmt.Fprintf(app.Out, "No archived versions of items named like %q; nothing to delete.\n", c.Name)
+		like := "named like"
+		if c.Exact {
+			like = "named"
+		}
+		fmt.Fprintf(app.Out, "No archived versions of items %s %q; nothing to delete.\n", like, c.Name)
 		return nil
 	}
 	slices.SortStableFunc(versions, func(a, b *addigy.SmartSoftware) int {
@@ -238,7 +245,7 @@ func deleteVersion(app *App, api *addigy.API, org string, s *addigy.SmartSoftwar
 }
 
 // archivedIDs are the instruction IDs of the archived versions of the items
-// whose name contains --name.
+// whose name contains --name, or with --exact is it.
 func (c *SmartSoftwareDeleteCmd) archivedIDs(app *App) ([]string, error) {
 	archived := true
 	items, err := allSmartSoftware(app, addigy.SmartSoftwareQuery{NameContains: c.Name, Archived: &archived})
@@ -250,7 +257,8 @@ func (c *SmartSoftwareDeleteCmd) archivedIDs(app *App) ([]string, error) {
 	needle := strings.ToLower(c.Name)
 	var ids []string
 	for _, s := range items {
-		if s.Archived && strings.Contains(strings.ToLower(s.BaseIdentifier), needle) {
+		name := strings.ToLower(s.BaseIdentifier)
+		if s.Archived && (c.Exact && name == needle || !c.Exact && strings.Contains(name, needle)) {
 			ids = append(ids, s.InstructionID)
 		}
 	}
