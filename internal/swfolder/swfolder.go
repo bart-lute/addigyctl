@@ -170,7 +170,7 @@ func existingIdentifier(dir string) string {
 
 // FolderName turns an item's name into a folder name: lowercase, with every
 // run of characters other than letters, digits, "." and "_" replaced by one
-// "-" ("Akvo/User Config" -> "akvo-user-config"). It is "" when nothing
+// "-" ("Acme/User Config" -> "acme-user-config"). It is "" when nothing
 // usable is left.
 func FolderName(name string) string {
 	var b strings.Builder

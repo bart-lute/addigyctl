@@ -97,7 +97,7 @@ func TestReadRejectsUnknownKeys(t *testing.T) {
 func TestFolderName(t *testing.T) {
 	for in, want := range map[string]string{
 		"Adobe Remote Update Manager":   "adobe-remote-update-manager",
-		"Akvo/user-configurator-config": "akvo-user-configurator-config",
+		"Acme/user-configurator-config": "acme-user-configurator-config",
 		"Backblaze Installer.app":       "backblaze-installer.app",
 		"  Zoom (Rooms) ":               "zoom-rooms",
 		"..":                            "",

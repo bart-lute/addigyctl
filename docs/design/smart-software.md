@@ -135,8 +135,8 @@ after the version become `version_downloads` patterns.
 
 `export` without `--dir` or `--item` names the folder after the item:
 `<software_root>/<slug>`, where the slug is the name lowercased with other characters
-than letters, digits, `.` and `_` turned into `-` (`Akvo/user-config` →
-`akvo-user-config`). Writing never replaces a folder holding a different item (another
+than letters, digits, `.` and `_` turned into `-` (`Acme/user-config` →
+`acme-user-config`). Writing never replaces a folder holding a different item (another
 `identifier`), even with `--force`.
 
 Export always escapes `{{` in Addigy's content (`{{"{{"}}`), so the folder renders back
