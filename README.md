@@ -187,7 +187,8 @@ addigyctl smart-software get Airtame           # latest version as JSON
 addigyctl smart-software export Airtame --placeholders   # → <software_root>/airtame
 addigyctl smart-software new-version Airtame --to 4.16.0 --dry-run   # finds Airtame-4.16.0.pkg itself
 addigyctl smart-software new-version Airtame --to 4.16.0
-addigyctl smart-software delete <instruction_id> --dry-run   # backs up, then deletes one version
+addigyctl smart-software delete <instruction_id> [<instruction_id> ...] --dry-run   # backs up, then deletes
+addigyctl smart-software delete --archived --name zoom   # every archived version of the matching items
 addigyctl files find --name Airtame-4.16       # look up uploads by name (loose search) or --md5
 ```
 
@@ -220,9 +221,9 @@ For automation, `--wait-for-files 2h` waits (checking every 30 seconds) for down
 
 A new version does nothing until it is assigned to policies, which addigyctl does not do. The v2 API cannot upload files: upload installers in the Addigy UI first.
 
-**Deleting.** `delete` removes one version, named by its `instruction_id` only (a name or `identifier` would mean whichever version is latest). The item's other versions stay, and so do its downloads in Addigy's file storage (`files list --unused` shows the ones nothing uses any more). It shows the version and its downloads and asks for confirmation (`--dry-run` only shows it; `--yes` skips the question; without a terminal it refuses rather than ask). The API key needs Addigy's "Delete Smart Software" permission.
+**Deleting.** `delete` removes versions, named by their `instruction_id` only (a name or `identifier` would mean whichever version is latest), or picked with `--archived --name <text>`: every archived version of the items whose name contains the text (`--name` is required, so it never means every archived version at once). The items' other versions stay, and so do their downloads in Addigy's file storage (`files list --unused` shows the ones nothing uses any more). It fetches every version first, so an unknown ID stops it with nothing deleted, then shows them (oldest first per item) with their downloads and asks for confirmation once (`--dry-run` only shows them; `--yes` skips the question; without a terminal it refuses rather than ask). A failed delete doesn't stop the others; they are all reported at the end. The API key needs Addigy's "Delete Smart Software" permission; a refusal of the key itself (401 or 403) stops the run.
 
-Before deleting, it writes a backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If the backup can't be written, nothing is deleted; if the delete fails, the backup is removed again. `--no-backup` skips it. There is no restore command yet.
+Before deleting a version, it writes its backup: the version as Addigy returns it, with its scripts, settings and each download's ID, name, size and MD5, but not the files themselves. Backups go to `<backup_dir>/<item>/<version>-<instruction_id>-<UTC time>.json` (`--backup-dir` overrides the config file), readable only by you, since scripts can hold license keys or tokens. If a backup can't be written, that version and the ones after it are not deleted; if a delete fails, its backup is removed again. `--no-backup` skips the backups. There is no restore command yet.
 
 A version that is assigned to policies is deleted all the same: Addigy silently removes it from those policies, and the backup does not record them. The v2 API doesn't show these assignments reliably, so addigyctl can't check first; look in the Addigy UI before deleting a version that may be in use.
 
