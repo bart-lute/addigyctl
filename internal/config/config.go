@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -45,6 +46,37 @@ type File struct {
 	// BackupDir is where smart-software delete writes its backups. "~" is
 	// expanded. Defaults to <Dir>/backups.
 	BackupDir string `json:"backup_dir,omitempty"`
+	// ExportDir is where exports such as devices export are written when no
+	// file is given. "~" is expanded. Defaults to DefaultExportDir.
+	ExportDir string `json:"export_dir,omitempty"`
+}
+
+// DefaultExportDir is where exports are written when no folder is
+// configured. It is outside ~/Documents and ~/Desktop on purpose: those may
+// sync to iCloud, and exports can hold personal data or secrets.
+const DefaultExportDir = "~/addigy-exports"
+
+// ResolveExportDir returns the export folder: override (a flag or
+// environment variable) when set, else the file's export_dir, else
+// DefaultExportDir, with "~" expanded.
+func (f File) ResolveExportDir(override string) string {
+	for _, dir := range []string{override, f.ExportDir, DefaultExportDir} {
+		if dir != "" {
+			return ExpandHome(dir)
+		}
+	}
+	return ""
+}
+
+// ExpandHome replaces a leading "~" in a path with the user's home
+// directory.
+func ExpandHome(p string) string {
+	if p == "~" || strings.HasPrefix(p, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, strings.TrimPrefix(p, "~"))
+		}
+	}
+	return p
 }
 
 // Template is what `addigyctl config init` writes.

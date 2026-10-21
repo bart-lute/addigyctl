@@ -242,24 +242,28 @@ func TestDevicesExportFactsKeepOrderWithoutStaticFields(t *testing.T) {
 
 func TestDevicesExportDefaultFileNameAndOverwrite(t *testing.T) {
 	es := newExportServer(t)
-	t.Chdir(t.TempDir())
+	dir := filepath.Join(t.TempDir(), "exports") // created by the export
+	g := Globals{ExportDir: dir}
 	cmd := &DevicesExportCmd{Policy: "Acme / Finance", Direct: true}
-	r := es.run(t, Globals{}, "", cmd)
+	r := es.run(t, g, "", cmd)
 	if r.err != nil {
 		t.Fatal(r.err)
 	}
-	name := "devices-finance-" + time.Now().In(time.FixedZone("UTC+2", 2*3600)).Format("2006-01-02") + ".xlsx"
+	if fi, err := os.Stat(dir); err != nil || fi.Mode().Perm() != 0o700 {
+		t.Errorf("export folder mode = %v, %v", fi.Mode().Perm(), err)
+	}
+	name := filepath.Join(dir, "devices-finance-"+time.Now().In(time.FixedZone("UTC+2", 2*3600)).Format("2006-01-02")+".xlsx")
 	f := openExport(t, name)
 	rows, _ := f.GetRows(exportSheet)
 	if len(rows) != 2 || rows[1][0] != "beta" {
 		t.Errorf("--direct rows = %q, want only beta", rows)
 	}
 
-	if r := es.run(t, Globals{}, "", cmd); r.err == nil || !strings.Contains(r.err.Error(), "--force") {
+	if r := es.run(t, g, "", cmd); r.err == nil || !strings.Contains(r.err.Error(), "--force") {
 		t.Errorf("second export: err = %v, want a refusal mentioning --force", r.err)
 	}
 	cmd.Force = true
-	if r := es.run(t, Globals{}, "", cmd); r.err != nil {
+	if r := es.run(t, g, "", cmd); r.err != nil {
 		t.Errorf("with --force: %v", r.err)
 	}
 }

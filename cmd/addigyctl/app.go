@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -71,6 +70,7 @@ func newApp(ctx context.Context, g *Globals) (*App, error) {
 		g.SoftwareRoot = cfg.SoftwareRoot
 	}
 	g.SoftwareRoot = expandHome(g.SoftwareRoot)
+	g.ExportDir = cfg.ResolveExportDir(g.ExportDir)
 
 	return &App{Ctx: ctx, G: g, Cfg: cfg, CfgPath: path, In: os.Stdin, Out: os.Stdout, Err: os.Stderr}, nil
 }
@@ -211,14 +211,7 @@ func (a *App) DateStyle() (output.DateStyle, error) {
 	return output.DateStyle{Loc: loc, Layout: a.DateLayout()}, nil
 }
 
-func expandHome(p string) string {
-	if p == "~" || strings.HasPrefix(p, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, strings.TrimPrefix(p, "~"))
-		}
-	}
-	return p
-}
+func expandHome(p string) string { return config.ExpandHome(p) }
 
 // confirm asks a yes/no question on stderr and reads the answer from In.
 // Anything but "y" or "yes" is no. When In is not a terminal (a script or

@@ -22,6 +22,7 @@ type Globals struct {
 	BaseURL      string `name:"base-url" env:"ADDIGY_BASE_URL" help:"API base URL (default https://api.addigy.com/api/v2)."`
 	OrgID        string `name:"org-id" env:"ADDIGY_ORG_ID" help:"Organization ID. Discovered from your policies when unset."`
 	SoftwareRoot string `name:"software-root" env:"ADDIGYCTL_SOFTWARE_ROOT" placeholder:"DIR" help:"Folder holding Smart Software item folders, for --item."`
+	ExportDir    string `name:"export-dir" env:"ADDIGYCTL_EXPORT_DIR" placeholder:"DIR" help:"Folder for exports written without a file name (default: \"export_dir\" in the config file, else ~/addigy-exports)."`
 	ConfigFile   string `name:"config-file" env:"ADDIGYCTL_CONFIG" help:"Path to the config file (default: <user config dir>/addigyctl/config.json)."`
 	Output       string `name:"output" short:"o" placeholder:"FORMAT" help:"Output format: table (default), json or csv."`
 	JSON         bool   `name:"json" short:"j" help:"Print raw JSON instead of a table (same as --output json)."`

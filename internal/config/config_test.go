@@ -71,3 +71,21 @@ func TestWarnIfLoose(t *testing.T) {
 		t.Errorf("unexpected warning: %q", buf.String())
 	}
 }
+
+func TestResolveExportDir(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip(err)
+	}
+	for _, tc := range []struct {
+		override, configured, want string
+	}{
+		{"", "", filepath.Join(home, "addigy-exports")},
+		{"", "~/exports", filepath.Join(home, "exports")},
+		{"/tmp/x", "~/exports", "/tmp/x"},
+	} {
+		if got := (File{ExportDir: tc.configured}).ResolveExportDir(tc.override); got != tc.want {
+			t.Errorf("ResolveExportDir(%q) with export_dir %q = %q, want %q", tc.override, tc.configured, got, tc.want)
+		}
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 // ---- devices export --------------------------------------------------------
 
 type DevicesExportCmd struct {
-	File   string   `arg:"" optional:"" type:"path" help:"Excel file to write. Default: devices-<policy>-<date>.xlsx (devices-all-<date>.xlsx without --policy) in the current folder."`
+	File   string   `arg:"" optional:"" type:"path" help:"Excel file to write. Default: devices-<policy>-<date>.xlsx (devices-all-<date>.xlsx without --policy) in the export folder (--export-dir)."`
 	Policy string   `help:"Only devices located in this policy or any of its sub-policies. Accepts an ID, a name, or a 'Parent / Child' path."`
 	Direct bool     `help:"With --policy: only devices located directly in that policy, not in its sub-policies."`
 	Facts  []string `name:"fact" short:"f" help:"Only export these fact identifiers, in this order (comma-separated or repeated), and no static fields. Default: every fact and static field in your tenant."`
@@ -83,7 +84,10 @@ func (c *DevicesExportCmd) Run(app *App) error {
 
 	path := c.File
 	if path == "" {
-		path = xlsx.FileName("devices", scope, time.Now().In(loc))
+		if err := os.MkdirAll(app.G.ExportDir, 0o700); err != nil {
+			return fmt.Errorf("creating the export folder: %w", err)
+		}
+		path = filepath.Join(app.G.ExportDir, xlsx.FileName("devices", scope, time.Now().In(loc)))
 	}
 	if !c.Force {
 		if _, err := os.Stat(path); err == nil {

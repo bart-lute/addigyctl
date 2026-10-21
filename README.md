@@ -48,6 +48,7 @@ Settings are resolved in this order: command-line flags, environment variables, 
 | Date format  | n/a               | n/a                   | `date_format`   |
 | Table borders | `--borders` / `--no-borders` | n/a  | `borders`       |
 | Software root | `--software-root` | `ADDIGYCTL_SOFTWARE_ROOT` | `software_root` |
+| Export folder | `--export-dir` | `ADDIGYCTL_EXPORT_DIR` | `export_dir` |
 
 The config file is `config.json` in the user config directory: `~/Library/Application Support/addigyctl/config.json` on macOS, `$XDG_CONFIG_HOME/addigyctl/config.json` (or `~/.config/addigyctl/config.json`) on Linux. Create a template with:
 
@@ -67,11 +68,12 @@ addigyctl config show     # effective configuration, API key redacted
   "date_format": "dd-mm-yyyy hh:mm:ss",
   "borders": false,
   "software_root": "~/src/addigy-software",
-  "backup_dir": ""
+  "backup_dir": "",
+  "export_dir": "~/addigy-exports"
 }
 ```
 
-`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. `backup_dir` is where `smart-software delete` writes its backups and `files delete` its deletion logs; it defaults to `backups` next to the config file, and `~` is expanded. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
+`org_id` is optional: when it is not set, it is discovered from your policies. `timezone` is an IANA location name (or `CET`/`UTC`) used to render dates, such as `ade tokens`' `TOKEN EXPIRY` and `LAST SCAN` columns; it defaults to the machine's local time zone. `date_format` is a friendly pattern built from `yyyy`, `mm`, `dd`, `hh`, `mm` and `ss` (the second `mm`, next to a `:`, means minutes; the one next to `-`/`/` means month, e.g. `dd-mm-yyyy hh:mm:ss`); it defaults to the notation of the machine's current locale (`LC_ALL`/`LC_TIME`/`LANG`), falling back to day-month-year when that can't be determined. `borders` draws table output as a bordered grid instead of whitespace-separated columns (see [Output formats](#output-formats)); it defaults to `false`, and `--borders`/`--no-borders` always override it. `software_root` is the folder holding Smart Software item folders (see [Smart Software](#smart-software)); `~` is expanded. `backup_dir` is where `smart-software delete` writes its backups and `files delete` its deletion logs; it defaults to `backups` next to the config file, and `~` is expanded. `export_dir` is the folder exports go to when you don't name a file (see [Exporting to Excel](#exporting-to-excel)); it defaults to `~/addigy-exports`, is created readable only by you, and `~` is expanded. The default is deliberately not in `~/Documents` or `~/Desktop`, which macOS may sync to iCloud. Unknown keys in the file are rejected, and a warning is printed if the file is readable by other users. Prefer the environment variable or the config file over `--api-key`, which ends up in your shell history.
 
 ## Usage
 
@@ -128,7 +130,7 @@ A device has exactly one *location*: its `policy_id` fact. The separate `policy_
 #### Exporting to Excel
 
 ```sh
-addigyctl devices export                                   # every device: devices-all-<date>.xlsx
+addigyctl devices export                                   # every device: ~/addigy-exports/devices-all-<date>.xlsx
 addigyctl devices export --policy "Acme / Finance"         # located in it or any sub-policy
 addigyctl devices export --policy "Acme / Finance" --direct finance.xlsx
 addigyctl devices export -f os_version,battery_cycles      # only these facts
@@ -138,7 +140,7 @@ addigyctl devices export -f os_version,battery_cycles      # only these facts
 
 The header row is bold on a light blue background, frozen, and has a filter. Numbers are stored as numbers and timestamps as Excel dates (in the configured `timezone`), so they sort and filter properly. Timestamps are shown in the configured `date_format`, or else in Excel's own regional format. Everything else is text; a list is joined with `, `.
 
-The file is created readable by you only, as it can hold personal data such as user names. An existing file is not overwritten unless you pass `--force`. `--output` and `--json` don't apply.
+Without a file name the export goes to the export folder (`export_dir`, default `~/addigy-exports`); a file name you give is used as is. The file is created readable by you only, as it can hold personal data such as user names. An existing file is not overwritten unless you pass `--force`. `--output` and `--json` don't apply.
 
 ### Facts
 

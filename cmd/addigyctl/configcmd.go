@@ -43,6 +43,7 @@ func (c *ConfigShowCmd) Run(app *App) error {
 		OrgID        string   `json:"org_id"`
 		DeviceFacts  []string `json:"device_facts"`
 		SoftwareRoot string   `json:"software_root"`
+		ExportDir    string   `json:"export_dir"`
 	}{
 		ConfigFile:   app.CfgPath,
 		APIKey:       redact(app.G.APIKey),
@@ -50,6 +51,7 @@ func (c *ConfigShowCmd) Run(app *App) error {
 		OrgID:        output.Value(app.G.OrgID),
 		DeviceFacts:  firstNonEmpty(app.Cfg.DeviceFacts, defaultDeviceFacts),
 		SoftwareRoot: app.G.SoftwareRoot,
+		ExportDir:    app.G.ExportDir,
 	}
 	if view.SoftwareRoot == "" {
 		view.SoftwareRoot = "(not set; use --dir with smart-software commands)"
