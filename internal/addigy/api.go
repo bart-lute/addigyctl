@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ginkio/addigyctl/internal/addigy/gen"
@@ -226,6 +227,95 @@ func (a *API) SearchDevices(ctx context.Context, q DeviceQuery) (*DevicePage, er
 		page.Items = append(page.Items, d)
 	}
 	return page, nil
+}
+
+const (
+	// fanOutWorkers bounds how many page requests run at once.
+	fanOutWorkers = 4
+
+	// LocationFact is the device fact holding the policy the device is located
+	// in. (policy_ids, in contrast, lists every policy that applies to it.)
+	LocationFact = "policy_id"
+
+	// StableSortField is the server-side order used while paging through all
+	// devices, so parallel page requests neither overlap nor skip devices.
+	StableSortField = "serial_number"
+)
+
+// AllDevices returns every device matching q, fetching the pages after the
+// first in parallel. It also returns the total Addigy reported, so callers
+// can detect an incomplete result. Use StableSortField as q.SortField.
+func (a *API) AllDevices(ctx context.Context, q DeviceQuery) ([]Device, int, error) {
+	q.Page = 1
+	first, err := a.SearchDevices(ctx, q)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	pageCount := first.Metadata.PageCount
+	pages := make([][]Device, max(pageCount, 1))
+	errs := make([]error, len(pages))
+	pages[0] = first.Items
+
+	sem := make(chan struct{}, fanOutWorkers)
+	var wg sync.WaitGroup
+	for p := 2; p <= pageCount; p++ {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(p int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			pq := q
+			pq.Page = p
+			pg, err := a.SearchDevices(ctx, pq)
+			if err != nil {
+				errs[p-1] = err
+				return
+			}
+			pages[p-1] = pg.Items
+		}(p)
+	}
+	wg.Wait()
+
+	seen := map[string]bool{}
+	var all []Device
+	for i, items := range pages {
+		if errs[i] != nil {
+			return nil, 0, errs[i]
+		}
+		for _, d := range items {
+			if seen[d.AgentID] {
+				continue
+			}
+			seen[d.AgentID] = true
+			all = append(all, d)
+		}
+	}
+	return all, first.Metadata.Total, nil
+}
+
+// Value returns a fact's value, or false when the device doesn't have the
+// fact or its value is null.
+func (d Device) Value(id string) (any, bool) {
+	f, ok := d.Facts[id]
+	if !ok || f.Value == nil {
+		return nil, false
+	}
+	return f.Value, true
+}
+
+// LocatedIn keeps the devices whose location (LocationFact) is one of
+// policyIDs.
+func LocatedIn(ds []Device, policyIDs map[string]bool) []Device {
+	var out []Device
+	for _, d := range ds {
+		if v, ok := d.Value(LocationFact); ok {
+			if id, ok := v.(string); ok && policyIDs[id] {
+				out = append(out, d)
+			}
+		}
+	}
+	return out
 }
 
 // DevicePolicyAssignments returns the IDs of the policies assigned to a

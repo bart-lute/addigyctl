@@ -7,6 +7,7 @@ import (
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
+	"github.com/ginkio/addigyctl/internal/policytree"
 )
 
 type AdeCmd struct {
@@ -40,13 +41,13 @@ func (c *AdeTokensCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	idx := newPolicyIndex(pols)
+	idx := policytree.New(pols)
 
 	rows := make([]adeRow, len(tokens))
 	for i, t := range tokens {
 		row := adeRow{token: t, path: t.PolicyID}
-		if p, ok := idx.byID[t.PolicyID]; ok {
-			row.path = idx.path(p)
+		if p, ok := idx.Get(t.PolicyID); ok {
+			row.path = idx.Path(p)
 		}
 		rows[i] = row
 	}

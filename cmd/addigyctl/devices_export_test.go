@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/xuri/excelize/v2"
+
+	"github.com/ginkio/addigyctl/internal/xlsx"
 )
 
 const exportFactsFixture = `[
@@ -160,13 +162,13 @@ func TestDevicesExportPolicy(t *testing.T) {
 	if want := mustExcelTime(t, time.Date(2026, 3, 4, 12, 20, 30, 0, time.UTC)); raw != want {
 		t.Errorf("Last Online raw value = %q, want %q", raw, want)
 	}
-	if st := cellStyle(t, f, "G3"); st.NumFmt != excelDateTimeFormat {
-		t.Errorf("Last Online number format = %d, want %d", st.NumFmt, excelDateTimeFormat)
+	if st := cellStyle(t, f, "G3"); st.NumFmt != xlsx.DateTimeFormat {
+		t.Errorf("Last Online number format = %d, want %d", st.NumFmt, xlsx.DateTimeFormat)
 	}
 
 	// Header: bold, light blue, frozen, with a filter over the whole table.
 	st := cellStyle(t, f, "I1")
-	if st.Font == nil || !st.Font.Bold || len(st.Fill.Color) != 1 || !strings.EqualFold(st.Fill.Color[0], exportHeaderFill) {
+	if st.Font == nil || !st.Font.Bold || len(st.Fill.Color) != 1 || !strings.EqualFold(st.Fill.Color[0], xlsx.HeaderFill) {
 		t.Errorf("header style = font %+v fill %+v", st.Font, st.Fill)
 	}
 	panes, err := f.GetPanes(exportSheet)
@@ -287,29 +289,6 @@ func TestDevicesExportErrors(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err == nil {
 		t.Error("a failed export left a file behind")
-	}
-}
-
-func TestFileSlug(t *testing.T) {
-	for in, want := range map[string]string{
-		"Sales":           "sales",
-		"Acme / Laptops":  "acme-laptops",
-		"  Ünïcode -- 2 ": "n-code-2",
-		"***":             "policy",
-	} {
-		if got := fileSlug(in); got != want {
-			t.Errorf("fileSlug(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
-func TestTruncateCell(t *testing.T) {
-	long := strings.Repeat("x", excelize.TotalCellChars+10)
-	if got := truncateCell(long); len([]rune(got)) != excelize.TotalCellChars {
-		t.Errorf("truncated to %d runes", len([]rune(got)))
-	}
-	if truncateCell("short") != "short" {
-		t.Error("short text changed")
 	}
 }
 

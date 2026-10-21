@@ -9,6 +9,7 @@ import (
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
+	"github.com/ginkio/addigyctl/internal/policytree"
 )
 
 // defaultDeviceFacts are the table columns used when neither --fact nor the
@@ -145,14 +146,7 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 		return nil, none, "", nil, err
 	}
 
-	members := []addigy.Policy{root}
-	if !c.Direct {
-		members = idx.subtree(root.ID)
-	}
-	member := make(map[string]bool, len(members))
-	for _, p := range members {
-		member[p.ID] = true
-	}
+	member := idx.Members(root.ID, c.Direct)
 
 	sortField := c.Sort
 	if sortField == "" {
@@ -161,13 +155,13 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 	q := addigy.DeviceQuery{
 		Search: c.Search,
 		// The location and the sort field must be returned to filter and sort on them.
-		Facts: withFact(withFact(facts, sortField), locationFact),
+		Facts: withFact(withFact(facts, sortField), addigy.LocationFact),
 		// A fixed, (near-)unique server-side order keeps pages consistent while
 		// they are fetched in parallel; the requested sort is applied below.
-		SortField: stableSortField,
+		SortField: addigy.StableSortField,
 		PerPage:   fetchPageSize,
 	}
-	all, reported, err := fetchAllDevices(app.Ctx, api, q)
+	all, reported, err := api.AllDevices(app.Ctx, q)
 	if err != nil {
 		return nil, none, "", nil, err
 	}
@@ -175,19 +169,19 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 		fmt.Fprintf(app.Err, "warning: Addigy reported %d devices but %d were received; the list may be incomplete\n", reported, len(all))
 	}
 
-	located := locatedIn(all, member)
+	located := addigy.LocatedIn(all, member)
 	sortDevices(located, sortField, c.Desc)
 	shown, meta := paginate(located, c.Page, c.PerPage, c.All)
 
 	scope := fmt.Sprintf(" in %q", root.Name)
 	var locate func(addigy.Device) string
-	if n := len(members) - 1; n > 0 {
+	if n := len(member) - 1; n > 0 {
 		scope += " and " + count(n, "sub-policy", "sub-policies")
 		locate = func(d addigy.Device) string {
-			v, _ := factValue(d, locationFact)
+			v, _ := d.Value(addigy.LocationFact)
 			id, _ := v.(string)
-			if p, ok := idx.byID[id]; ok {
-				return idx.path(p)
+			if p, ok := idx.Get(id); ok {
+				return idx.Path(p)
 			}
 			return id
 		}
@@ -292,7 +286,7 @@ func policyHint(app *App, api *addigy.API, ref string) string {
 	if err != nil {
 		return ""
 	}
-	p, err := newPolicyIndex(pols).resolve(ref)
+	p, err := policytree.New(pols).Resolve(ref)
 	if err != nil {
 		return ""
 	}
@@ -310,7 +304,7 @@ func identifiesDevice(d addigy.Device, ref string) bool {
 		return true
 	}
 	for _, id := range deviceIdentityFacts {
-		if v, ok := factValue(d, id); ok {
+		if v, ok := d.Value(id); ok {
 			if s, ok := v.(string); ok && strings.EqualFold(s, ref) {
 				return true
 			}
@@ -351,8 +345,8 @@ func pickDevice(items []addigy.Device, ref string, total int) (addigy.Device, er
 	var b strings.Builder
 	fmt.Fprintf(&b, "%q %s %d devices; use the agent ID or serial number instead. First %d:", ref, what, n, min(len(candidates), maxCandidates))
 	for _, d := range candidates[:min(len(candidates), maxCandidates)] {
-		serial, _ := factValue(d, "serial_number")
-		name, _ := factValue(d, "device_name")
+		serial, _ := d.Value("serial_number")
+		name, _ := d.Value("device_name")
 		fmt.Fprintf(&b, "\n  %s  %s  %s", d.AgentID, output.Value(serial), output.Value(name))
 	}
 	if n > maxCandidates {

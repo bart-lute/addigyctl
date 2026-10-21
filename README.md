@@ -329,6 +329,8 @@ internal/swfolder/       the Smart Software item folder format and placeholders
 internal/addigy/gen/     generated client and models (do not edit)
 internal/config/         config file handling
 internal/output/         table, CSV and JSON rendering
+internal/policytree/     the policy hierarchy: lookup by ID, name or path, sub-policies, tree rendering
+internal/xlsx/           styled Excel (.xlsx) output
 tools/swagger2openapi/   converts the Swagger 2.0 spec to OpenAPI 3
 api/                     the Addigy spec (openapi3.json is derived and git-ignored)
 ```

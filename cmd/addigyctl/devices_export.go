@@ -4,16 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
-
-	"github.com/xuri/excelize/v2"
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
+	"github.com/ginkio/addigyctl/internal/policytree"
+	"github.com/ginkio/addigyctl/internal/xlsx"
 )
 
 // ---- devices export --------------------------------------------------------
@@ -26,20 +24,8 @@ type DevicesExportCmd struct {
 	Force  bool     `help:"Overwrite the file if it already exists."`
 }
 
-const (
-	exportSheet = "Devices"
-
-	// exportHeaderFill is the background of the header row (a light blue).
-	exportHeaderFill = "DDEBF7"
-
-	// exportMinWidth and exportMaxWidth bound the column widths, in characters.
-	exportMinWidth = 8
-	exportMaxWidth = 50
-
-	// excelDateTimeFormat is Excel's built-in date-and-time format (number
-	// format 22). Excel shows it in the viewer's own regional format.
-	excelDateTimeFormat = 22
-)
+// exportSheet is the name of the worksheet.
+const exportSheet = "Devices"
 
 // exportLeadFacts are the first columns, in this order, followed by the
 // device's policy. The remaining columns follow alphabetically.
@@ -85,27 +71,19 @@ func (c *DevicesExportCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	idx := newPolicyIndex(pols)
+	idx := policytree.New(pols)
 	scope, member := "all", map[string]bool(nil)
 	if c.Policy != "" {
-		root, err := idx.resolve(c.Policy)
+		root, err := idx.Resolve(c.Policy)
 		if err != nil {
 			return err
 		}
-		members := []addigy.Policy{root}
-		if !c.Direct {
-			members = idx.subtree(root.ID)
-		}
-		member = make(map[string]bool, len(members))
-		for _, p := range members {
-			member[p.ID] = true
-		}
-		scope = root.Name
+		member, scope = idx.Members(root.ID, c.Direct), root.Name
 	}
 
 	path := c.File
 	if path == "" {
-		path = fmt.Sprintf("devices-%s-%s.xlsx", fileSlug(scope), time.Now().In(loc).Format("2006-01-02"))
+		path = xlsx.FileName("devices", scope, time.Now().In(loc))
 	}
 	if !c.Force {
 		if _, err := os.Stat(path); err == nil {
@@ -113,9 +91,9 @@ func (c *DevicesExportCmd) Run(app *App) error {
 		}
 	}
 
-	devices, reported, err := fetchAllDevices(app.Ctx, api, addigy.DeviceQuery{
-		Facts:     withFact(facts, locationFact),
-		SortField: stableSortField,
+	devices, reported, err := api.AllDevices(app.Ctx, addigy.DeviceQuery{
+		Facts:     withFact(facts, addigy.LocationFact),
+		SortField: addigy.StableSortField,
 		PerPage:   fetchPageSize,
 	})
 	if err != nil {
@@ -125,7 +103,7 @@ func (c *DevicesExportCmd) Run(app *App) error {
 		fmt.Fprintf(app.Err, "warning: Addigy reported %d devices but %d were received; the export may be incomplete\n", reported, len(devices))
 	}
 	if member != nil {
-		devices = locatedIn(devices, member)
+		devices = addigy.LocatedIn(devices, member)
 	}
 	sortExportRows(devices)
 
@@ -148,12 +126,18 @@ func (c *DevicesExportCmd) Run(app *App) error {
 	}
 
 	cols := exportColumns(facts, defs, static, values, idx, loc, len(c.Facts) == 0)
-	f, err := buildWorkbook(cols, devices, app.Cfg.DateFormat)
-	if err != nil {
-		return err
+	headers := make([]string, len(cols))
+	for i, col := range cols {
+		headers[i] = col.header
 	}
-	defer f.Close()
-	if err := writeWorkbook(f, path); err != nil {
+	rows := make([][]any, len(devices))
+	for r, d := range devices {
+		rows[r] = make([]any, len(cols))
+		for i, col := range cols {
+			rows[r][i] = col.value(d)
+		}
+	}
+	if err := xlsx.Write(path, headers, rows, xlsx.Options{Sheet: exportSheet, DateFormat: app.Cfg.DateFormat}); err != nil {
 		return err
 	}
 	fmt.Fprintf(app.Out, "Exported %s (%s) to %s\n",
@@ -200,7 +184,7 @@ func (c *DevicesExportCmd) exportFacts(defs []addigy.FactDef) ([]string, error) 
 // ordered by header (case-insensitively); otherwise the facts keep their
 // given order.
 func exportColumns(facts []string, defs []addigy.FactDef, static []addigy.StaticField,
-	values map[string]map[string]string, idx *policyIndex, loc *time.Location, sorted bool) []exportColumn {
+	values map[string]map[string]string, idx *policytree.Index, loc *time.Location, sorted bool) []exportColumn {
 	names := make(map[string]string, len(defs))
 	for _, d := range defs {
 		names[d.Identifier] = d.Name
@@ -218,10 +202,10 @@ func exportColumns(facts []string, defs []addigy.FactDef, static []addigy.Static
 		cols = append(cols, factColumn(id))
 	}
 	cols = append(cols, exportColumn{"Policy", func(d addigy.Device) any {
-		v, _ := factValue(d, locationFact)
+		v, _ := d.Value(addigy.LocationFact)
 		id, _ := v.(string)
-		if p, ok := idx.byID[id]; ok {
-			return idx.path(p)
+		if p, ok := idx.Get(id); ok {
+			return idx.Path(p)
 		}
 		return id
 	}})
@@ -257,9 +241,8 @@ func exportColumns(facts []string, defs []addigy.FactDef, static []addigy.Static
 }
 
 // exportFactValue returns a device's fact as a cell value: a number for a
-// number, a time.Time for a timestamp (in loc, as Excel has no time zones),
-// nil for a missing fact, and text for everything else. A list of plain
-// values is joined with ", ".
+// number, a time.Time in loc for a timestamp, nil for a missing fact, and
+// text for everything else. A list of plain values is joined with ", ".
 func exportFactValue(d addigy.Device, id string, loc *time.Location) any {
 	f, ok := d.Facts[id]
 	if !ok || f.Value == nil {
@@ -271,8 +254,7 @@ func exportFactValue(d addigy.Device, id string, loc *time.Location) any {
 	case string:
 		if f.Type == "date" || f.Type == "datetime" {
 			if t := output.ParseTime(v); !t.IsZero() {
-				t = t.In(loc)
-				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
+				return t.In(loc)
 			}
 		}
 		return v
@@ -294,7 +276,7 @@ func exportFactValue(d addigy.Device, id string, loc *time.Location) any {
 // sortExportRows orders devices by name, then serial number.
 func sortExportRows(ds []addigy.Device) {
 	key := func(d addigy.Device, id string) string {
-		v, _ := factValue(d, id)
+		v, _ := d.Value(id)
 		return strings.ToLower(output.Field(v))
 	}
 	sort.SliceStable(ds, func(i, j int) bool {
@@ -303,134 +285,4 @@ func sortExportRows(ds []addigy.Device) {
 		}
 		return key(ds[i], "serial_number") < key(ds[j], "serial_number")
 	})
-}
-
-// buildWorkbook writes the header and one row per device to a new workbook.
-// The header row is bold on a light blue background, frozen and filterable.
-// Timestamps use dateFormat (the config file's "date_format", whose tokens
-// Excel understands too) or else Excel's regional date and time format.
-func buildWorkbook(cols []exportColumn, devices []addigy.Device, dateFormat string) (*excelize.File, error) {
-	f := excelize.NewFile()
-	if err := f.SetSheetName("Sheet1", exportSheet); err != nil {
-		return nil, err
-	}
-	headerStyle, err := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true},
-		Fill: excelize.Fill{Type: "pattern", Pattern: 1, Color: []string{exportHeaderFill}},
-	})
-	if err != nil {
-		return nil, err
-	}
-	dateStyle := &excelize.Style{NumFmt: excelDateTimeFormat}
-	if dateFormat != "" {
-		dateStyle = &excelize.Style{CustomNumFmt: &dateFormat}
-	}
-	dateStyleID, err := f.NewStyle(dateStyle)
-	if err != nil {
-		return nil, err
-	}
-
-	widths := make([]int, len(cols))
-	isDate := make([]bool, len(cols))
-	header := make([]any, len(cols))
-	for i, c := range cols {
-		header[i] = c.header
-		widths[i] = utf8.RuneCountInString(c.header)
-	}
-	if err := f.SetSheetRow(exportSheet, "A1", &header); err != nil {
-		return nil, err
-	}
-	row := make([]any, len(cols))
-	for r, d := range devices {
-		for i, c := range cols {
-			v := c.value(d)
-			switch x := v.(type) {
-			case string:
-				v = truncateCell(x)
-				widths[i] = max(widths[i], utf8.RuneCountInString(x))
-			case float64:
-				widths[i] = max(widths[i], len(output.Field(x)))
-			case time.Time:
-				isDate[i] = true
-				widths[i] = max(widths[i], 19)
-			}
-			row[i] = v
-		}
-		cell, err := excelize.CoordinatesToCellName(1, r+2)
-		if err != nil {
-			return nil, err
-		}
-		if err := f.SetSheetRow(exportSheet, cell, &row); err != nil {
-			return nil, err
-		}
-	}
-
-	lastRow := len(devices) + 1
-	for i := range cols {
-		name, err := excelize.ColumnNumberToName(i + 1)
-		if err != nil {
-			return nil, err
-		}
-		width := float64(min(max(widths[i], exportMinWidth), exportMaxWidth) + 2)
-		if err := f.SetColWidth(exportSheet, name, name, width); err != nil {
-			return nil, err
-		}
-		if isDate[i] {
-			if err := f.SetCellStyle(exportSheet, name+"2", fmt.Sprintf("%s%d", name, lastRow), dateStyleID); err != nil {
-				return nil, err
-			}
-		}
-	}
-	last, err := excelize.CoordinatesToCellName(len(cols), 1)
-	if err != nil {
-		return nil, err
-	}
-	if err := f.SetCellStyle(exportSheet, "A1", last, headerStyle); err != nil {
-		return nil, err
-	}
-	if err := f.SetPanes(exportSheet, &excelize.Panes{
-		Freeze: true, YSplit: 1, TopLeftCell: "A2", ActivePane: "bottomLeft",
-	}); err != nil {
-		return nil, err
-	}
-	lastCell, err := excelize.CoordinatesToCellName(len(cols), lastRow)
-	if err != nil {
-		return nil, err
-	}
-	if err := f.AutoFilter(exportSheet, "A1:"+lastCell, nil); err != nil {
-		return nil, err
-	}
-	return f, nil
-}
-
-// truncateCell shortens text to what an Excel cell can hold.
-func truncateCell(s string) string {
-	if utf8.RuneCountInString(s) <= excelize.TotalCellChars {
-		return s
-	}
-	return output.Truncate(s, excelize.TotalCellChars)
-}
-
-// writeWorkbook saves the workbook readable by the current user only: an
-// export can hold personal data such as user names and email addresses.
-func writeWorkbook(f *excelize.File, path string) error {
-	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	if err := f.Write(out); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
-}
-
-var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
-
-// fileSlug turns a policy name into something safe for a file name.
-func fileSlug(s string) string {
-	if slug := strings.Trim(slugRe.ReplaceAllString(strings.ToLower(s), "-"), "-"); slug != "" {
-		return slug
-	}
-	return "policy"
 }

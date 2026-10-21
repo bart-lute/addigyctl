@@ -11,6 +11,7 @@ import (
 
 	"github.com/ginkio/addigyctl/internal/addigy"
 	"github.com/ginkio/addigyctl/internal/output"
+	"github.com/ginkio/addigyctl/internal/policytree"
 )
 
 type PoliciesCmd struct {
@@ -43,7 +44,7 @@ func (c *PoliciesListCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	idx := newPolicyIndex(pols)
+	idx := policytree.New(pols)
 
 	var (
 		scope      []addigy.Policy
@@ -54,18 +55,18 @@ func (c *PoliciesListCmd) Run(app *App) error {
 	)
 	switch {
 	case c.Parent != "":
-		parent, err := idx.resolve(c.Parent)
+		parent, err := idx.Resolve(c.Parent)
 		if err != nil {
 			return err
 		}
-		scope = idx.children[parent.ID]
+		scope = idx.Children(parent.ID)
 		one, many = "sub-policy", "sub-policies"
 		suffix = fmt.Sprintf(" of %q", parent.Name)
 	case c.All || c.Name != "" || len(c.IDs) > 0:
-		scope = idx.all
+		scope = idx.All()
 		showParent = true
 	default:
-		scope = idx.roots
+		scope = idx.Roots()
 		one, many = "root policy", "root policies"
 		rootView = true
 	}
@@ -126,9 +127,9 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		if devices != nil {
 			row = append(row, strconv.Itoa(devices[p.ID]))
 		}
-		row = append(row, strconv.Itoa(len(idx.children[p.ID])))
+		row = append(row, strconv.Itoa(len(idx.Children(p.ID))))
 		if withParent {
-			parent := idx.parentName(p)
+			parent := idx.ParentName(p)
 			if app.csv() && p.Parent == "" {
 				parent = ""
 			}
@@ -184,17 +185,17 @@ func (c *PoliciesTreeCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	idx := newPolicyIndex(pols)
+	idx := policytree.New(pols)
 
-	starts := idx.roots
+	starts := idx.Roots()
 	if c.Ref != "" {
-		p, err := idx.resolve(c.Ref)
+		p, err := idx.Resolve(c.Ref)
 		if err != nil {
 			return err
 		}
 		starts = []addigy.Policy{p}
 	}
-	nodes := idx.buildTree(starts, c.Depth)
+	nodes := idx.BuildTree(starts, c.Depth)
 
 	counted := !c.NoCounts
 	if counted {
@@ -202,7 +203,7 @@ func (c *PoliciesTreeCmd) Run(app *App) error {
 		if err != nil {
 			return err
 		}
-		setDeviceCounts(nodes, totals)
+		policytree.SetDeviceCounts(nodes, totals)
 	}
 
 	switch app.Format() {
@@ -214,10 +215,10 @@ func (c *PoliciesTreeCmd) Run(app *App) error {
 		if counted {
 			headers = append(headers, "DEVICES")
 		}
-		return output.CSV(app.Out, headers, idx.treeRows(nodes, 0))
+		return output.CSV(app.Out, headers, idx.Rows(nodes, 0))
 	}
-	writeTree(app.Out, nodes, c.IDs)
-	app.footer("%s", count(countNodes(nodes), "policy", "policies"))
+	policytree.Write(app.Out, nodes, c.IDs)
+	app.footer("%s", count(policytree.CountNodes(nodes), "policy", "policies"))
 	if counted {
 		fmt.Fprintln(app.Out, "[n] = devices in the policy and all of its sub-policies.")
 	}
@@ -242,7 +243,7 @@ func (c *PoliciesGetCmd) Run(app *App) error {
 	if err != nil {
 		return err
 	}
-	p, err := newPolicyIndex(pols).resolve(c.Ref)
+	p, err := policytree.New(pols).Resolve(c.Ref)
 	if err != nil {
 		return err
 	}
@@ -265,7 +266,7 @@ func policyNames(pols []addigy.Policy) map[string]string {
 // column has, so it means "the other order" regardless of --sort.
 var policySortMostFirst = map[string]bool{"devices": true, "children": true}
 
-func sortPolicyRows(shown []addigy.Policy, idx *policyIndex, devices map[string]int, col string, desc bool) error {
+func sortPolicyRows(shown []addigy.Policy, idx *policytree.Index, devices map[string]int, col string, desc bool) error {
 	col = strings.ToLower(col)
 	if col == "" {
 		col = "name"
@@ -291,9 +292,9 @@ func sortPolicyRows(shown []addigy.Policy, idx *policyIndex, devices map[string]
 		case "devices":
 			c = cmpInt(devices[a.ID], devices[b.ID])
 		case "children":
-			c = cmpInt(len(idx.children[a.ID]), len(idx.children[b.ID]))
+			c = cmpInt(len(idx.Children(a.ID)), len(idx.Children(b.ID)))
 		case "parent":
-			c = cmpString(idx.parentName(a), idx.parentName(b))
+			c = cmpString(idx.ParentName(a), idx.ParentName(b))
 		}
 		if c == 0 {
 			c = cmpString(a.Name, b.Name)

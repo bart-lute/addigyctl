@@ -244,9 +244,9 @@ type deviceIdentity struct {
 // alertDeviceIndex maps every device's agent ID to its serial number and
 // name.
 func alertDeviceIndex(app *App, api *addigy.API) (map[string]deviceIdentity, error) {
-	all, reported, err := fetchAllDevices(app.Ctx, api, addigy.DeviceQuery{
+	all, reported, err := api.AllDevices(app.Ctx, addigy.DeviceQuery{
 		Facts:     []string{"serial_number", "device_name"},
-		SortField: stableSortField,
+		SortField: addigy.StableSortField,
 		PerPage:   fetchPageSize,
 	})
 	if err != nil {
@@ -257,8 +257,8 @@ func alertDeviceIndex(app *App, api *addigy.API) (map[string]deviceIdentity, err
 	}
 	idx := make(map[string]deviceIdentity, len(all))
 	for _, d := range all {
-		serial, _ := factValue(d, "serial_number")
-		name, _ := factValue(d, "device_name")
+		serial, _ := d.Value("serial_number")
+		name, _ := d.Value("device_name")
 		s, _ := serial.(string)
 		n, _ := name.(string)
 		idx[d.AgentID] = deviceIdentity{serial: s, name: n}

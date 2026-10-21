@@ -452,3 +452,50 @@ func TestStaticFieldsNone(t *testing.T) {
 		t.Errorf("fields = %#v, want empty", fields)
 	}
 }
+
+func TestAllDevicesFetchesEveryPageAndDeduplicates(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Page int `json:"page"`
+		}
+		json.NewDecoder(r.Body).Decode(&body)
+		// Page 2 repeats d2, as a page shifting under a concurrent change would.
+		items := map[int]string{
+			1: `{"agentid":"d1","facts":{"policy_id":{"type":"string","value":"p1"}}},{"agentid":"d2","facts":{"policy_id":{"type":"string","value":"p2"}}}`,
+			2: `{"agentid":"d2","facts":{"policy_id":{"type":"string","value":"p2"}}},{"agentid":"d3","facts":{}}`,
+		}[body.Page]
+		io.WriteString(w, `{"items":[`+items+`],"metadata":{"page":1,"page_count":2,"per_page":2,"result_count":2,"total":4}}`)
+	})
+
+	ds, reported, err := api.AllDevices(context.Background(), DeviceQuery{PerPage: 2, SortField: StableSortField})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ds) != 3 || reported != 4 {
+		t.Fatalf("got %d devices (reported %d), want 3 (reported 4)", len(ds), reported)
+	}
+	in := LocatedIn(ds, map[string]bool{"p2": true})
+	if len(in) != 1 || in[0].AgentID != "d2" {
+		t.Errorf("LocatedIn = %+v", in)
+	}
+	if _, ok := ds[2].Value(LocationFact); ok {
+		t.Error("d3 has no location")
+	}
+}
+
+func TestAllDevicesStopsOnError(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Page int `json:"page"`
+		}
+		json.NewDecoder(r.Body).Decode(&body)
+		if body.Page == 2 {
+			http.Error(w, `{"message":"boom"}`, http.StatusInternalServerError)
+			return
+		}
+		io.WriteString(w, `{"items":[{"agentid":"d1"}],"metadata":{"page":1,"page_count":2,"per_page":1,"result_count":1,"total":2}}`)
+	})
+	if _, _, err := api.AllDevices(context.Background(), DeviceQuery{PerPage: 1}); err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Errorf("err = %v, want the page 2 error", err)
+	}
+}

@@ -1,4 +1,7 @@
-package main
+// Package policytree organizes Addigy's flat policy list into a hierarchy:
+// resolving a policy by ID, name or path, walking its sub-policies and
+// rendering the tree.
+package policytree
 
 import (
 	"fmt"
@@ -10,20 +13,20 @@ import (
 	"github.com/ginkio/addigyctl/internal/addigy"
 )
 
-// policyIndex organizes the flat policy list Addigy returns into a hierarchy.
+// Index organizes the flat policy list Addigy returns into a hierarchy.
 // All lookups are client-side; the API returns every policy in one response.
-type policyIndex struct {
+type Index struct {
 	all      []addigy.Policy
 	byID     map[string]addigy.Policy
 	children map[string][]addigy.Policy // parent ID -> direct children, sorted by name
 	roots    []addigy.Policy            // sorted by name
 }
 
-// newPolicyIndex builds the index. A policy is a root when it has no parent
+// New builds the index. A policy is a root when it has no parent
 // (Addigy returns null) or when its parent is not in the result set, so that
 // no policy is ever hidden from the default view.
-func newPolicyIndex(pols []addigy.Policy) *policyIndex {
-	x := &policyIndex{
+func New(pols []addigy.Policy) *Index {
+	x := &Index{
 		all:      append([]addigy.Policy(nil), pols...),
 		byID:     make(map[string]addigy.Policy, len(pols)),
 		children: map[string][]addigy.Policy{},
@@ -47,6 +50,21 @@ func newPolicyIndex(pols []addigy.Policy) *policyIndex {
 	return x
 }
 
+// Get returns the policy with the given ID.
+func (x *Index) Get(id string) (addigy.Policy, bool) {
+	p, ok := x.byID[id]
+	return p, ok
+}
+
+// All returns every policy, sorted by name.
+func (x *Index) All() []addigy.Policy { return x.all }
+
+// Roots returns the policies without a (known) parent, sorted by name.
+func (x *Index) Roots() []addigy.Policy { return x.roots }
+
+// Children returns the direct sub-policies of a policy, sorted by name.
+func (x *Index) Children(id string) []addigy.Policy { return x.children[id] }
+
 func sortPolicies(ps []addigy.Policy) {
 	sort.SliceStable(ps, func(i, j int) bool {
 		a, b := strings.ToLower(ps[i].Name), strings.ToLower(ps[j].Name)
@@ -57,11 +75,11 @@ func sortPolicies(ps []addigy.Policy) {
 	})
 }
 
-// resolve finds a policy by ID, exact (case-insensitive) name, or full path
+// Resolve finds a policy by ID, exact (case-insensitive) name, or full path
 // ("Parent / Child"). Names are not guaranteed to be unique, so an ambiguous
 // name is an error that lists the candidates with their full path, which can
 // then be used as the reference.
-func (x *policyIndex) resolve(ref string) (addigy.Policy, error) {
+func (x *Index) Resolve(ref string) (addigy.Policy, error) {
 	if p, ok := x.byID[ref]; ok {
 		return p, nil
 	}
@@ -74,7 +92,7 @@ func (x *policyIndex) resolve(ref string) (addigy.Policy, error) {
 	if len(matches) == 0 && strings.Contains(ref, "/") {
 		want := normalizePath(ref)
 		for _, p := range x.all {
-			if strings.EqualFold(x.path(p), want) {
+			if strings.EqualFold(x.Path(p), want) {
 				matches = append(matches, p)
 			}
 		}
@@ -87,7 +105,7 @@ func (x *policyIndex) resolve(ref string) (addigy.Policy, error) {
 	}
 	lines := make([]string, len(matches))
 	for i, p := range matches {
-		lines[i] = fmt.Sprintf("  %s  %s", p.ID, x.path(p))
+		lines[i] = fmt.Sprintf("  %s  %s", p.ID, x.Path(p))
 	}
 	return addigy.Policy{}, fmt.Errorf("%q matches %d policies; use the ID instead:\n%s", ref, len(matches), strings.Join(lines, "\n"))
 }
@@ -101,9 +119,9 @@ func normalizePath(ref string) string {
 	return strings.Join(parts, " / ")
 }
 
-// subtree returns the policy with the given ID followed by all of its
+// Subtree returns the policy with the given ID followed by all of its
 // descendants (depth-first, siblings sorted by name).
-func (x *policyIndex) subtree(id string) []addigy.Policy {
+func (x *Index) Subtree(id string) []addigy.Policy {
 	root, ok := x.byID[id]
 	if !ok {
 		return nil
@@ -125,8 +143,23 @@ func (x *policyIndex) subtree(id string) []addigy.Policy {
 	return out
 }
 
-// path returns "Root / Parent / Policy".
-func (x *policyIndex) path(p addigy.Policy) string {
+// Members returns the IDs of the policies a device can be located in to
+// count as "in" the policy with the given ID: that policy and, unless direct
+// is set, all of its sub-policies.
+func (x *Index) Members(id string, direct bool) map[string]bool {
+	ps := x.Subtree(id)
+	if direct && len(ps) > 0 {
+		ps = ps[:1]
+	}
+	m := make(map[string]bool, len(ps))
+	for _, p := range ps {
+		m[p.ID] = true
+	}
+	return m
+}
+
+// Path returns "Root / Parent / Policy".
+func (x *Index) Path(p addigy.Policy) string {
 	parts := []string{p.Name}
 	seen := map[string]bool{p.ID: true}
 	for cur := p; cur.Parent != ""; {
@@ -141,8 +174,8 @@ func (x *policyIndex) path(p addigy.Policy) string {
 	return strings.Join(parts, " / ")
 }
 
-// parentName returns the display name of a policy's parent, or "-" for roots.
-func (x *policyIndex) parentName(p addigy.Policy) string {
+// ParentName returns the display name of a policy's parent, or "-" for roots.
+func (x *Index) ParentName(p addigy.Policy) string {
 	if p.Parent == "" {
 		return "-"
 	}
@@ -152,21 +185,21 @@ func (x *policyIndex) parentName(p addigy.Policy) string {
 	return p.Parent
 }
 
-// treeNode is one policy in a rendered hierarchy (also the --json shape).
-type treeNode struct {
+// Node is one policy in a rendered hierarchy (also the --json shape).
+type Node struct {
 	ID   string `json:"policyId"`
 	Name string `json:"name"`
 	// DeviceCount is the number of devices located in the policy or any of its
 	// sub-policies; nil when counts were not requested.
-	DeviceCount *int       `json:"deviceCount,omitempty"`
-	Children    []treeNode `json:"children,omitempty"`
+	DeviceCount *int   `json:"deviceCount,omitempty"`
+	Children    []Node `json:"children,omitempty"`
 }
 
-// buildTree returns the hierarchy below each of the given policies.
+// BuildTree returns the hierarchy below each of the given policies.
 // maxDepth is the number of levels shown below them; 0 means unlimited.
-func (x *policyIndex) buildTree(starts []addigy.Policy, maxDepth int) []treeNode {
+func (x *Index) BuildTree(starts []addigy.Policy, maxDepth int) []Node {
 	seen := map[string]bool{}
-	nodes := make([]treeNode, 0, len(starts))
+	nodes := make([]Node, 0, len(starts))
 	for _, p := range starts {
 		if seen[p.ID] {
 			continue
@@ -176,8 +209,8 @@ func (x *policyIndex) buildTree(starts []addigy.Policy, maxDepth int) []treeNode
 	return nodes
 }
 
-func (x *policyIndex) node(p addigy.Policy, level, maxDepth int, seen map[string]bool) treeNode {
-	n := treeNode{ID: p.ID, Name: p.Name}
+func (x *Index) node(p addigy.Policy, level, maxDepth int, seen map[string]bool) Node {
+	n := Node{ID: p.ID, Name: p.Name}
 	seen[p.ID] = true
 	if maxDepth == 0 || level < maxDepth {
 		for _, k := range x.children[p.ID] {
@@ -189,64 +222,64 @@ func (x *policyIndex) node(p addigy.Policy, level, maxDepth int, seen map[string
 	return n
 }
 
-// setDeviceCounts fills in DeviceCount on every node.
-func setDeviceCounts(nodes []treeNode, totals map[string]int) {
+// SetDeviceCounts fills in DeviceCount on every node.
+func SetDeviceCounts(nodes []Node, totals map[string]int) {
 	for i := range nodes {
 		n := totals[nodes[i].ID]
 		nodes[i].DeviceCount = &n
-		setDeviceCounts(nodes[i].Children, totals)
+		SetDeviceCounts(nodes[i].Children, totals)
 	}
 }
 
-// treeRows flattens nodes (depth first) into CSV rows: ID, name, full path,
+// Rows flattens nodes (depth first) into CSV rows: ID, name, full path,
 // depth below the starting policy (0 = a starting policy) and, when counted,
 // devices.
-func (x *policyIndex) treeRows(nodes []treeNode, depth int) [][]string {
+func (x *Index) Rows(nodes []Node, depth int) [][]string {
 	var rows [][]string
 	for _, n := range nodes {
 		path := n.Name
 		if p, ok := x.byID[n.ID]; ok {
-			path = x.path(p)
+			path = x.Path(p)
 		}
 		row := []string{n.ID, n.Name, path, strconv.Itoa(depth)}
 		if n.DeviceCount != nil {
 			row = append(row, strconv.Itoa(*n.DeviceCount))
 		}
 		rows = append(rows, row)
-		rows = append(rows, x.treeRows(n.Children, depth+1)...)
+		rows = append(rows, x.Rows(n.Children, depth+1)...)
 	}
 	return rows
 }
 
-// rollUp turns per-policy device counts (devices located directly in a policy)
+// RollUp turns per-policy device counts (devices located directly in a policy)
 // into totals that include every sub-policy.
-func (x *policyIndex) rollUp(direct map[string]int) map[string]int {
+func (x *Index) RollUp(direct map[string]int) map[string]int {
 	totals := make(map[string]int, len(x.all))
 	for _, p := range x.all {
-		for _, m := range x.subtree(p.ID) {
+		for _, m := range x.Subtree(p.ID) {
 			totals[p.ID] += direct[m.ID]
 		}
 	}
 	return totals
 }
 
-func countNodes(nodes []treeNode) int {
+func CountNodes(nodes []Node) int {
 	n := len(nodes)
 	for _, c := range nodes {
-		n += countNodes(c.Children)
+		n += CountNodes(c.Children)
 	}
 	return n
 }
 
-// writeTree renders nodes as an indented tree with box-drawing connectors.
-func writeTree(w io.Writer, nodes []treeNode, showIDs bool) {
+// Write renders nodes as an indented tree with box-drawing connectors.
+func Write(w io.Writer, nodes []Node, showIDs bool) {
 	for _, n := range nodes {
 		fmt.Fprintln(w, treeLabel(n, showIDs))
 		writeChildren(w, n.Children, "", showIDs)
 	}
 }
 
-func writeChildren(w io.Writer, kids []treeNode, prefix string, showIDs bool) {
+func writeChildren(w io.Writer, kids []Node, prefix string, showIDs bool) {
 	for i, k := range kids {
 		connector, next := "├── ", "│   "
 		if i == len(kids)-1 {
@@ -257,7 +290,7 @@ func writeChildren(w io.Writer, kids []treeNode, prefix string, showIDs bool) {
 	}
 }
 
-func treeLabel(n treeNode, showIDs bool) string {
+func treeLabel(n Node, showIDs bool) string {
 	name := n.Name
 	if name == "" {
 		name = "(unnamed)"
