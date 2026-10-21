@@ -30,3 +30,5 @@ output-options:
     - DeleteSmartSoftware
     - GetTrackedFiles
     - DeleteOrganizationFile
+    - GetStaticFields
+    - GetStaticFieldValues

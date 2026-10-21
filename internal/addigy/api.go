@@ -323,6 +323,89 @@ func (a *API) AvailableFacts(ctx context.Context, orgID string) ([]FactDef, erro
 	return facts, nil
 }
 
+// ---- Static fields ---------------------------------------------------------
+
+// StaticField is a field an admin defines and fills in by hand per device.
+type StaticField struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// StaticFieldValue is one device's value for a static field.
+type StaticFieldValue struct {
+	AgentID string `json:"agentid"`
+	FieldID string `json:"static_field_id"`
+	Value   string `json:"value"`
+}
+
+// staticFieldsPageSize is the page size used for the static field endpoints.
+// It is a variable so tests can force multiple pages.
+var staticFieldsPageSize = 100
+
+// trailingSlash adds the "/" Addigy expects at the end of the request path
+// (GET /static-fields answers 301 Moved Permanently to /static-fields/).
+func trailingSlash(_ context.Context, req *http.Request) error {
+	if !strings.HasSuffix(req.URL.Path, "/") {
+		req.URL.Path += "/"
+	}
+	return nil
+}
+
+// StaticFields lists every static field of the organization, fetching all
+// pages (GET /static-fields/).
+func (a *API) StaticFields(ctx context.Context) ([]StaticField, error) {
+	var all []StaticField
+	for page := 1; ; page++ {
+		params := &gen.GetStaticFieldsParams{Page: page, PerPage: staticFieldsPageSize}
+		resp, err := a.c.GetStaticFieldsWithResponse(ctx, params, trailingSlash)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+			return nil, err
+		}
+		var raw struct {
+			Items    []StaticField `json:"items"`
+			Metadata PageMetadata  `json:"metadata"`
+		}
+		if err := json.Unmarshal(resp.Body, &raw); err != nil {
+			return nil, fmt.Errorf("decoding static fields: %w", err)
+		}
+		all = append(all, raw.Items...)
+		if len(raw.Items) == 0 || page >= raw.Metadata.PageCount {
+			return nonNil(all), nil
+		}
+	}
+}
+
+// StaticFieldValues lists every value of every static field on every
+// device, fetching all pages (GET /static-fields/value).
+func (a *API) StaticFieldValues(ctx context.Context) ([]StaticFieldValue, error) {
+	var all []StaticFieldValue
+	perPage := staticFieldsPageSize
+	for page := 1; ; page++ {
+		params := &gen.GetStaticFieldValuesParams{Page: &page, PerPage: &perPage}
+		resp, err := a.c.GetStaticFieldValuesWithResponse(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+			return nil, err
+		}
+		var raw struct {
+			Items    []StaticFieldValue `json:"items"`
+			Metadata PageMetadata       `json:"metadata"`
+		}
+		if err := json.Unmarshal(resp.Body, &raw); err != nil {
+			return nil, fmt.Errorf("decoding static field values: %w", err)
+		}
+		all = append(all, raw.Items...)
+		if len(raw.Items) == 0 || page >= raw.Metadata.PageCount {
+			return nonNil(all), nil
+		}
+	}
+}
+
 // ---- ADE tokens -------------------------------------------------------------
 
 // AdeToken is the projection of an Automated Device Enrollment (ADE) token

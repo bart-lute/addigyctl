@@ -76,7 +76,7 @@ addigyctl config show     # effective configuration, API key redacted
 ## Usage
 
 ```
-addigyctl devices  list | get | policies
+addigyctl devices  list | get | policies | export
 addigyctl policies list | tree | get
 addigyctl facts    list
 addigyctl ade      tokens
@@ -124,6 +124,21 @@ addigyctl devices policies <agent-id>          # policies assigned to a device
 ```
 
 A device has exactly one *location*: its `policy_id` fact. The separate `policy_ids` fact lists every policy that applies to it, which is a different question. `--policy` filters on the location, and adds a `LOCATION` column when sub-policies are included. Addigy cannot filter on a policy subtree itself, so with `--policy` the devices are fetched (a few pages in parallel), filtered, sorted and paginated locally.
+
+#### Exporting to Excel
+
+```sh
+addigyctl devices export                                   # every device: devices-all-<date>.xlsx
+addigyctl devices export --policy "Acme / Finance"         # located in it or any sub-policy
+addigyctl devices export --policy "Acme / Finance" --direct finance.xlsx
+addigyctl devices export -f os_version,battery_cycles      # only these facts
+```
+
+`devices export` writes one row per device to an Excel (`.xlsx`) file, with every fact your tenant has (`facts list`) and every static field (the fields you fill in by hand per device in Addigy) as columns. The first columns are Device Name, Serial Number and Policy (the device's location, as a `Parent / Child` path); the rest follow alphabetically by name. `--fact` limits the export to the given facts, in that order, and leaves out the static fields. Rows are sorted by device name.
+
+The header row is bold on a light blue background, frozen, and has a filter. Numbers are stored as numbers and timestamps as Excel dates (in the configured `timezone`), so they sort and filter properly. Timestamps are shown in the configured `date_format`, or else in Excel's own regional format. Everything else is text; a list is joined with `, `.
+
+The file is created readable by you only, as it can hold personal data such as user names. An existing file is not overwritten unless you pass `--force`. `--output` and `--json` don't apply.
 
 ### Facts
 

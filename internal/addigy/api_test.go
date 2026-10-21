@@ -390,3 +390,65 @@ func TestEmptyPagesAreEmptyLists(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticFieldsUsesTrailingSlashAndPages(t *testing.T) {
+	old := staticFieldsPageSize
+	staticFieldsPageSize = 1
+	t.Cleanup(func() { staticFieldsPageSize = old })
+
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		// Addigy redirects /static-fields to /static-fields/; ask for the latter directly.
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/static-fields/" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if r.URL.Query().Get("per_page") != "1" {
+			t.Errorf("per_page = %q", r.URL.Query().Get("per_page"))
+		}
+		switch r.URL.Query().Get("page") {
+		case "1":
+			io.WriteString(w, `{"items":[{"id":"f1","name":"asset_tag"}],"metadata":{"page":1,"page_count":2,"per_page":1,"result_count":1,"total":2}}`)
+		case "2":
+			io.WriteString(w, `{"items":[{"id":"f2","name":"Room"}],"metadata":{"page":2,"page_count":2,"per_page":1,"result_count":1,"total":2}}`)
+		default:
+			t.Errorf("unexpected page %q", r.URL.Query().Get("page"))
+		}
+	})
+
+	fields, err := api.StaticFields(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fields) != 2 || fields[0] != (StaticField{"f1", "asset_tag"}) || fields[1] != (StaticField{"f2", "Room"}) {
+		t.Errorf("fields = %+v", fields)
+	}
+}
+
+func TestStaticFieldValues(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/static-fields/value" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		io.WriteString(w, `{"items":[{"agentid":"a1","static_field_id":"f1","value":"T-0042"}],"metadata":{"page":1,"page_count":1,"per_page":100,"result_count":1,"total":1}}`)
+	})
+
+	vals, err := api.StaticFieldValues(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 1 || vals[0] != (StaticFieldValue{AgentID: "a1", FieldID: "f1", Value: "T-0042"}) {
+		t.Errorf("values = %+v", vals)
+	}
+}
+
+func TestStaticFieldsNone(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"items":null,"metadata":{"page":1,"page_count":0,"per_page":100,"result_count":0,"total":0}}`)
+	})
+	fields, err := api.StaticFields(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fields == nil || len(fields) != 0 {
+		t.Errorf("fields = %#v, want empty", fields)
+	}
+}

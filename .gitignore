@@ -3,3 +3,6 @@ bin/
 api/openapi3.json
 .idea
 *.iml
+# Device exports (devices export) and Excel lock files: they hold tenant data.
+*.xlsx
+~$*

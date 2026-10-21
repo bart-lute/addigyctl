@@ -20,6 +20,7 @@ type DevicesCmd struct {
 	List     DevicesListCmd     `cmd:"" help:"Search devices (Universal Search)."`
 	Get      DevicesGetCmd      `cmd:"" help:"Show one device with all of its facts."`
 	Policies DevicesPoliciesCmd `cmd:"" help:"Show the policies assigned to a device."`
+	Export   DevicesExportCmd   `cmd:"" help:"Export devices with all their facts and static fields to an Excel file."`
 }
 
 // ---- devices list ----------------------------------------------------------

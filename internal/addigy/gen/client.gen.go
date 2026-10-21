@@ -1201,6 +1201,18 @@ type ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware struct {
 	Metadata *ResponseEntitiesMetadata            `json:"metadata,omitempty"`
 }
 
+// ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticField defines model for response_entities.PaginatedResponse-static_fields_entities_StaticField.
+type ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticField struct {
+	Items    *[]StaticFieldsEntitiesStaticField `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata          `json:"metadata,omitempty"`
+}
+
+// ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticFieldValueResponse defines model for response_entities.PaginatedResponse-static_fields_entities_StaticFieldValueResponse.
+type ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticFieldValueResponse struct {
+	Items    *[]StaticFieldsEntitiesStaticFieldValueResponse `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata                       `json:"metadata,omitempty"`
+}
+
 // ResponseEntitiesResponse defines model for response_entities.Response.
 type ResponseEntitiesResponse struct {
 	Items    interface{}               `json:"items,omitempty"`
@@ -1391,6 +1403,20 @@ type SmartSoftwareUpdateSmartSoftwareRequest struct {
 // SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped Example: finished
 type SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped string
 
+// StaticFieldsEntitiesStaticField defines model for static_fields_entities.StaticField.
+type StaticFieldsEntitiesStaticField struct {
+	Id             *string `json:"id,omitempty"`
+	Name           *string `json:"name,omitempty"`
+	OrganizationId *string `json:"organization_id,omitempty"`
+}
+
+// StaticFieldsEntitiesStaticFieldValueResponse defines model for static_fields_entities.StaticFieldValueResponse.
+type StaticFieldsEntitiesStaticFieldValueResponse struct {
+	Agentid       *string `json:"agentid,omitempty"`
+	StaticFieldId *string `json:"static_field_id,omitempty"`
+	Value         *string `json:"value,omitempty"`
+}
+
 // SystemEventsSearchRequestQuery defines model for system_events.searchRequestQuery.
 type SystemEventsSearchRequestQuery struct {
 	// FromDateTime Example: 2024-01-01T01:01:01Z
@@ -1552,6 +1578,24 @@ type CreateSmartSoftwareNewVersionJSONBody struct {
 
 // CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped defines parameters for CreateSmartSoftwareNewVersion.
 type CreateSmartSoftwareNewVersionJSONBodyStatusOnSkipped string
+
+// GetStaticFieldsParams defines parameters for GetStaticFields.
+type GetStaticFieldsParams struct {
+	// Page Requested Page
+	Page int `form:"page" json:"page"`
+
+	// PerPage Number of items in the response.
+	PerPage int `form:"per_page" json:"per_page"`
+}
+
+// GetStaticFieldValuesParams defines parameters for GetStaticFieldValues.
+type GetStaticFieldValuesParams struct {
+	// Page Requested Page
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PerPage Number of items in the response.
+	PerPage *int `form:"per_page,omitempty" json:"per_page,omitempty"`
+}
 
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
 type GetDevicesJSONRequestBody = DeviceEntitiesDeviceFilter
@@ -1871,6 +1915,20 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
 	GetSmartSoftwareItems(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStaticFields Get all static fields
+	//
+	// Gets a list of all static fields available for the organization. <br><b>Permission Required: </b>View Devices.
+	//
+	// Corresponds with GET /static-fields (the `GetStaticFields` operationId).
+	GetStaticFields(ctx context.Context, params *GetStaticFieldsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStaticFieldValues Get all static fields assigned to devices
+	//
+	// Gets a list of all static fields assigned to devices for the organization. <br><b>Permission Required: </b>View Devices.
+	//
+	// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
+	GetStaticFieldValues(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // GetDevicesWithBody Universal Search Devices
@@ -2338,6 +2396,40 @@ func (c *Client) GetSmartSoftwareItemsWithBody(ctx context.Context, contentType 
 // Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
 func (c *Client) GetSmartSoftwareItems(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSmartSoftwareItemsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetStaticFields Get all static fields
+//
+// Gets a list of all static fields available for the organization. <br><b>Permission Required: </b>View Devices.
+//
+// Corresponds with GET /static-fields (the `GetStaticFields` operationId).
+func (c *Client) GetStaticFields(ctx context.Context, params *GetStaticFieldsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetStaticFieldsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetStaticFieldValues Get all static fields assigned to devices
+//
+// Gets a list of all static fields assigned to devices for the organization. <br><b>Permission Required: </b>View Devices.
+//
+// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
+func (c *Client) GetStaticFieldValues(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetStaticFieldValuesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3001,6 +3093,130 @@ func NewGetSmartSoftwareItemsRequestWithBody(server string, contentType string, 
 	return req, nil
 }
 
+// NewGetStaticFieldsRequest constructs an http.Request for the GetStaticFields method
+func NewGetStaticFieldsRequest(server string, params *GetStaticFieldsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/static-fields")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "per_page", params.PerPage, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetStaticFieldValuesRequest constructs an http.Request for the GetStaticFieldValues method
+func NewGetStaticFieldValuesRequest(server string, params *GetStaticFieldValuesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/static-fields/value")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PerPage != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "per_page", *params.PerPage, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -3271,6 +3487,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /oa/smart-software/query (the `GetSmartSoftwareItems` operationId).
 	GetSmartSoftwareItemsWithResponse(ctx context.Context, body GetSmartSoftwareItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSmartSoftwareItemsResponse, error)
+
+	// GetStaticFieldsWithResponse Get all static fields
+	//
+	// Gets a list of all static fields available for the organization. <br><b>Permission Required: </b>View Devices.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /static-fields (the `GetStaticFields` operationId).
+	GetStaticFieldsWithResponse(ctx context.Context, params *GetStaticFieldsParams, reqEditors ...RequestEditorFn) (*GetStaticFieldsResponse, error)
+
+	// GetStaticFieldValuesWithResponse Get all static fields assigned to devices
+	//
+	// Gets a list of all static fields assigned to devices for the organization. <br><b>Permission Required: </b>View Devices.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
+	GetStaticFieldValuesWithResponse(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*GetStaticFieldValuesResponse, error)
 }
 
 type GetDevicesResponse struct {
@@ -4139,6 +4373,102 @@ func (r GetSmartSoftwareItemsResponse) ContentType() string {
 	return ""
 }
 
+type GetStaticFieldsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticField
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetStaticFieldsResponse) GetJSON200() *ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticField {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetStaticFieldsResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetBody returns the raw response body bytes
+func (r GetStaticFieldsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStaticFieldsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStaticFieldsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetStaticFieldsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetStaticFieldValuesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticFieldValueResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetStaticFieldValuesResponse) GetJSON200() *ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticFieldValueResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetStaticFieldValuesResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetBody returns the raw response body bytes
+func (r GetStaticFieldValuesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStaticFieldValuesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStaticFieldValuesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetStaticFieldValuesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetDevicesWithBodyWithResponse Universal Search Devices
 //
 // Queries devices in your organization by a device-fact value. <br><b>Permission Required: </b>View Devices.
@@ -4520,6 +4850,36 @@ func (c *ClientWithResponses) GetSmartSoftwareItemsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseGetSmartSoftwareItemsResponse(rsp)
+}
+
+// GetStaticFieldsWithResponse Get all static fields
+//
+// Gets a list of all static fields available for the organization. <br><b>Permission Required: </b>View Devices.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /static-fields (the `GetStaticFields` operationId).
+func (c *ClientWithResponses) GetStaticFieldsWithResponse(ctx context.Context, params *GetStaticFieldsParams, reqEditors ...RequestEditorFn) (*GetStaticFieldsResponse, error) {
+	rsp, err := c.GetStaticFields(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetStaticFieldsResponse(rsp)
+}
+
+// GetStaticFieldValuesWithResponse Get all static fields assigned to devices
+//
+// Gets a list of all static fields assigned to devices for the organization. <br><b>Permission Required: </b>View Devices.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
+func (c *ClientWithResponses) GetStaticFieldValuesWithResponse(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*GetStaticFieldValuesResponse, error) {
+	rsp, err := c.GetStaticFieldValues(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetStaticFieldValuesResponse(rsp)
 }
 
 // ParseGetDevicesResponse parses an HTTP response from a GetDevicesWithResponse call
@@ -5148,6 +5508,72 @@ func ParseGetSmartSoftwareItemsResponse(rsp *http.Response) (*GetSmartSoftwareIt
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetStaticFieldsResponse parses an HTTP response from a GetStaticFieldsWithResponse call
+func ParseGetStaticFieldsResponse(rsp *http.Response) (*GetStaticFieldsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStaticFieldsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticField
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetStaticFieldValuesResponse parses an HTTP response from a GetStaticFieldValuesWithResponse call
+func ParseGetStaticFieldValuesResponse(rsp *http.Response) (*GetStaticFieldValuesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStaticFieldValuesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesPaginatedResponseStaticFieldsEntitiesStaticFieldValueResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
