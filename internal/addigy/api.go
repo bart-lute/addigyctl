@@ -147,6 +147,10 @@ type Fact struct {
 	ErrorMsg string `json:"error_msg"`
 }
 
+// IsDate reports whether the fact holds a timestamp. Addigy reports these as
+// "date" (last_online, for one), even when they include a time of day.
+func (f Fact) IsDate() bool { return f.Type == "date" || f.Type == "datetime" }
+
 // Device is the projection of a device audit the CLI displays.
 type Device struct {
 	AgentID        string          `json:"agentid"`

@@ -131,6 +131,28 @@ func TestFactCellCSVKeepsLongValuesAndLeavesMissingEmpty(t *testing.T) {
 	}
 }
 
+func TestFactCellFormatsTimestamps(t *testing.T) {
+	// Addigy reports last_online and the like as "date", with a time of day.
+	d := addigy.Device{Facts: map[string]addigy.Fact{
+		"last_online": {Type: "date", Value: "2026-10-21T12:55:34.785Z"},
+		"old_style":   {Type: "datetime", Value: "2026-10-21T12:55:34Z"},
+		"not_a_date":  {Type: "date", Value: "unknown"},
+		"text":        {Type: "string", Value: "2026-10-21T12:55:34Z"},
+	}}
+	for id, want := range map[string]string{
+		"last_online": "21-10-2026 12:55:34",
+		"old_style":   "21-10-2026 12:55:34",
+		"not_a_date":  "unknown",
+		"text":        "2026-10-21T12:55:34Z", // only timestamp facts are formatted
+	} {
+		for _, csv := range []bool{false, true} {
+			if got := factCell(d, id, csv, testDateStyle); got != want {
+				t.Errorf("%s (csv %v) = %q, want %q", id, csv, got, want)
+			}
+		}
+	}
+}
+
 func TestDevicesGetCSVIsJustTheFactTable(t *testing.T) {
 	ds := newDeviceServer(t)
 	var out bytes.Buffer

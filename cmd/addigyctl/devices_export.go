@@ -256,7 +256,7 @@ func exportFactValue(d addigy.Device, id string, loc *time.Location) any {
 	case float64:
 		return v
 	case string:
-		if f.Type == "date" || f.Type == "datetime" {
+		if f.IsDate() {
 			if t := output.ParseTime(v); !t.IsZero() {
 				return t.In(loc)
 			}

@@ -191,7 +191,7 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 
 // factCell renders one fact of a device. Tables show "-" for missing facts and
 // shorten long values; CSV fields are left empty and never shortened. A
-// "datetime" fact is rendered using style.
+// timestamp fact is rendered using style.
 func factCell(d addigy.Device, id string, csv bool, style output.DateStyle) string {
 	f, ok := d.Facts[id]
 	if csv {
@@ -209,10 +209,10 @@ func factCell(d addigy.Device, id string, csv bool, style output.DateStyle) stri
 	return output.Truncate(output.Value(factValueDisplay(f, style)), 60)
 }
 
-// factValueDisplay returns a fact's value, formatting a "datetime" fact using
+// factValueDisplay returns a fact's value, formatting a timestamp fact using
 // style.
 func factValueDisplay(f addigy.Fact, style output.DateStyle) any {
-	if f.Type == "datetime" {
+	if f.IsDate() {
 		if s, ok := f.Value.(string); ok {
 			return style.DateTime(s)
 		}
