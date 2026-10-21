@@ -1,7 +1,7 @@
 SPEC_URL ?= https://api.addigy.com/api/v2/documentation/godoc_swagger.json
 SPEC     ?= api/godoc_swagger.json
 OPENAPI3 ?= api/openapi3.json
-BIN      ?= bin/addigyctl
+BIN      ?= bin
 VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
 .DEFAULT_GOAL := help
@@ -25,17 +25,17 @@ convert: ## Swagger 2.0 -> OpenAPI 3 (oapi-codegen needs OpenAPI 3)
 generate: convert ## Regenerate the API client in internal/addigy/gen
 	go tool oapi-codegen -config oapi-codegen.yaml $(OPENAPI3)
 
-build: ## Build bin/addigyctl
+build: ## Build bin/addigyctl and bin/addigy-fvkeys
 	go mod tidy
-	go build -ldflags "-X main.version=$(VERSION)" -o $(BIN) ./cmd/addigyctl
+	go build -ldflags "-X main.version=$(VERSION)" -o $(BIN)/ ./cmd/...
 
 all: generate build ## generate + build
 
 test: ## Run tests
 	go test ./...
 
-install: ## Install addigyctl into $GOBIN / $GOPATH/bin
-	go install -ldflags "-X main.version=$(VERSION)" ./cmd/addigyctl
+install: ## Install addigyctl and addigy-fvkeys into $GOBIN / $GOPATH/bin
+	go install -ldflags "-X main.version=$(VERSION)" ./cmd/...
 
 clean: ## Remove build output
 	rm -rf bin

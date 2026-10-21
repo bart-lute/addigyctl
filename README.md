@@ -25,7 +25,7 @@ Other Root [1]
 
 ```sh
 make setup      # one-time: pins oapi-codegen as a Go tool, fetches dependencies
-make build      # builds bin/addigyctl
+make build      # builds bin/addigyctl and bin/addigy-fvkeys
 make install    # or: install into $GOBIN / $GOPATH/bin
 ```
 
@@ -269,6 +269,10 @@ addigyctl files delete <file-id> <file-id>
 
 Each run writes a deletion log, readable only by you, to `<backup_dir>/files/deleted-<UTC time>.json`: every file's ID, name, size, MD5 and upload time, and whether it was deleted. It is not a backup, but it shows what was removed, and the MD5 recognizes a local copy (`md5 -q <file>`). If the log can't be written, nothing is deleted. Items Addigy has no name for show as their type and ID (e.g. `policy b8763068-…`). `--sort` takes `created` (default, newest first), `size` and `uses` (largest and most first) or `name`; `--desc` reverses that. Tables shorten long values, including the very long IDs of files uploaded before 2020; `-o csv` and `-j` keep them whole.
 
+### FileVault recovery keys
+
+Addigy's public API can't return FileVault recovery keys, so addigyctl can't export them. A separate, unofficial program in this repo can: `addigy-fvkeys` writes the keys of the devices in a policy to an Excel file, using Addigy's internal web app API and your browser session. It is a stopgap, to be removed once the public API supports this. See [cmd/addigy-fvkeys/README.md](cmd/addigy-fvkeys/README.md) before using it.
+
 ## Output formats
 
 | Flag                      | Output |
@@ -326,6 +330,7 @@ The wrapper in `internal/addigy` only decodes the fields the CLI needs and keeps
 
 ```
 cmd/addigyctl/           Kong commands
+cmd/addigy-fvkeys/       separate, unofficial FileVault recovery key export
 internal/addigy/         thin wrapper over the generated client
 internal/swfolder/       the Smart Software item folder format and placeholders
 internal/addigy/gen/     generated client and models (do not edit)
