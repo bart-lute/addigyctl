@@ -27,16 +27,17 @@ type DevicesCmd struct {
 // ---- devices list ----------------------------------------------------------
 
 type DevicesListCmd struct {
-	Search   string   `arg:"" optional:"" help:"Free-text search across device facts."`
-	Policy   string   `help:"Only devices located in this policy or any of its sub-policies (a device's location is its policy_id fact). Accepts an ID, a name, or a 'Parent / Child' path."`
-	Direct   bool     `help:"With --policy: only devices located directly in that policy, not in its sub-policies."`
-	NoPolicy bool     `name:"no-policy" help:"Only devices without any policy: no location (policy_id) and no policy applying to them (policy_ids)."`
-	Facts    []string `name:"fact" short:"f" help:"Fact identifiers to show as columns (comma-separated or repeated). Default: config device_facts, else serial_number,device_name,os_version."`
-	Sort     string   `help:"Fact identifier to sort by. With --policy or --no-policy the default is the first --fact column."`
-	Desc     bool     `help:"Sort descending."`
-	Page     int      `default:"1" help:"Page number."`
-	PerPage  int      `name:"per-page" default:"50" help:"Devices per page."`
-	All      bool     `help:"Fetch all pages."`
+	Search    string   `arg:"" optional:"" help:"Free-text search across device facts."`
+	Policy    string   `help:"Only devices located in this policy or any of its sub-policies (a device's location is its policy_id fact). Accepts an ID, a name, or a 'Parent / Child' path."`
+	Direct    bool     `help:"With --policy: only devices located directly in that policy, not in its sub-policies."`
+	NoPolicy  bool     `name:"no-policy" help:"Only devices without any policy: no location (policy_id) and no policy applying to them (policy_ids)."`
+	MDMIssues bool     `name:"mdm-issues" help:"Only devices that report false for has_mdm or has_mdm_profile_approved; both are added as columns. A fact a device doesn't report doesn't count."`
+	Facts     []string `name:"fact" short:"f" help:"Fact identifiers to show as columns (comma-separated or repeated). Default: config device_facts, else serial_number,device_name,os_version."`
+	Sort      string   `help:"Fact identifier to sort by. With --policy, --no-policy or --mdm-issues the default is the first --fact column."`
+	Desc      bool     `help:"Sort descending."`
+	Page      int      `default:"1" help:"Page number."`
+	PerPage   int      `name:"per-page" default:"50" help:"Devices per page."`
+	All       bool     `help:"Fetch all pages."`
 }
 
 func (c *DevicesListCmd) Run(app *App) error {
@@ -58,13 +59,15 @@ func (c *DevicesListCmd) Run(app *App) error {
 		scope   string
 		locate  func(addigy.Device) string // optional LOCATION column
 	)
-	switch {
-	case c.NoPolicy:
-		devices, meta, scope, err = c.searchNoPolicy(app, api, facts)
-	case c.Policy == "":
+	if c.MDMIssues {
+		for _, f := range mdmFacts {
+			facts = withFact(facts, f)
+		}
+	}
+	if c.Policy == "" && !c.NoPolicy && !c.MDMIssues {
 		devices, meta, err = c.searchServerSide(app, api, facts)
-	default:
-		devices, meta, scope, locate, err = c.searchPolicy(app, api, facts)
+	} else {
+		devices, meta, scope, locate, err = c.searchLocal(app, api, facts)
 	}
 	if err != nil {
 		return err
@@ -141,64 +144,77 @@ func (c *DevicesListCmd) searchServerSide(app *App, api *addigy.API, facts []str
 	return devices, meta, nil
 }
 
-// searchPolicy lists the devices whose location (the policy_id fact: every
-// device has exactly one) is the given policy or, unless --direct is set, any
-// of its sub-policies. Addigy can't filter on a policy subtree, so this
-// fetches the devices (a few pages in parallel), filters on the location here,
-// then sorts and paginates the result.
-func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string) ([]addigy.Device, addigy.PageMetadata, string, func(addigy.Device) string, error) {
+// searchLocal lists the devices matching --policy, --no-policy and/or
+// --mdm-issues. Addigy can't filter on a policy subtree, a missing value or
+// one of several facts, so this fetches every device matching the search (a
+// few pages in parallel), filters here, then sorts and paginates the result.
+func (c *DevicesListCmd) searchLocal(app *App, api *addigy.API, facts []string) ([]addigy.Device, addigy.PageMetadata, string, func(addigy.Device) string, error) {
 	var none addigy.PageMetadata
-	root, idx, err := resolvePolicy(app, api, c.Policy)
-	if err != nil {
-		return nil, none, "", nil, err
-	}
-
-	member := idx.Members(root.ID, c.Direct)
-
+	var (
+		keep   []func(addigy.Device) bool
+		scope  string
+		locate func(addigy.Device) string
+	)
 	sortField := c.sortField(facts)
-	all, err := c.fetchAll(app, api, withFact(facts, sortField), addigy.LocationFact)
-	if err != nil {
-		return nil, none, "", nil, err
-	}
+	// The sort field and every fact filtered on must be returned.
+	need := withFact(facts, sortField)
 
-	located := addigy.LocatedIn(all, member)
-	sortDevices(located, sortField, c.Desc)
-	shown, meta := paginate(located, c.Page, c.PerPage, c.All)
-
-	scope := fmt.Sprintf(" in %q", root.Name)
-	var locate func(addigy.Device) string
-	if n := len(member) - 1; n > 0 {
-		scope += " and " + count(n, "sub-policy", "sub-policies")
-		locate = func(d addigy.Device) string {
+	if c.Policy != "" {
+		// A device's location is its policy_id fact: every device has exactly one.
+		root, idx, err := resolvePolicy(app, api, c.Policy)
+		if err != nil {
+			return nil, none, "", nil, err
+		}
+		member := idx.Members(root.ID, c.Direct)
+		need = withFact(need, addigy.LocationFact)
+		keep = append(keep, func(d addigy.Device) bool {
 			v, _ := d.Value(addigy.LocationFact)
 			id, _ := v.(string)
-			if p, ok := idx.Get(id); ok {
-				return idx.Path(p)
+			return member[id]
+		})
+		scope = fmt.Sprintf(" in %q", root.Name)
+		if n := len(member) - 1; n > 0 {
+			scope += " and " + count(n, "sub-policy", "sub-policies")
+			locate = func(d addigy.Device) string {
+				v, _ := d.Value(addigy.LocationFact)
+				id, _ := v.(string)
+				if p, ok := idx.Get(id); ok {
+					return idx.Path(p)
+				}
+				return id
 			}
-			return id
 		}
 	}
-	return shown, meta, scope, locate, nil
-}
+	if c.NoPolicy {
+		need = withFact(withFact(need, addigy.LocationFact), policyIDsFact)
+		keep = append(keep, func(d addigy.Device) bool { return !hasPolicy(d) })
+		scope += " without any policy"
+	}
+	if c.MDMIssues {
+		for _, f := range mdmFacts {
+			need = withFact(need, f)
+		}
+		keep = append(keep, hasMDMIssue)
+		scope += " with MDM issues"
+	}
 
-// searchNoPolicy lists the devices without any policy: no location and no
-// policy that applies to them. Addigy can't filter on a missing value, so
-// this fetches every device and filters here, like searchPolicy.
-func (c *DevicesListCmd) searchNoPolicy(app *App, api *addigy.API, facts []string) ([]addigy.Device, addigy.PageMetadata, string, error) {
-	sortField := c.sortField(facts)
-	all, err := c.fetchAll(app, api, withFact(withFact(facts, sortField), addigy.LocationFact), policyIDsFact)
+	all, err := c.fetchAll(app, api, need)
 	if err != nil {
-		return nil, addigy.PageMetadata{}, "", err
+		return nil, none, "", nil, err
 	}
-	var without []addigy.Device
+	var matched []addigy.Device
+next:
 	for _, d := range all {
-		if !hasPolicy(d) {
-			without = append(without, d)
+		for _, k := range keep {
+			if !k(d) {
+				continue next
+			}
 		}
+		matched = append(matched, d)
 	}
-	sortDevices(without, sortField, c.Desc)
-	shown, meta := paginate(without, c.Page, c.PerPage, c.All)
-	return shown, meta, " without any policy", nil
+	sortDevices(matched, sortField, c.Desc)
+	shown, meta := paginate(matched, c.Page, c.PerPage, c.All)
+	return shown, meta, scope, locate, nil
 }
 
 // hasPolicy reports whether a device has a location or any policy that
@@ -212,6 +228,21 @@ func hasPolicy(d addigy.Device) bool {
 	return len(ids) > 0
 }
 
+// mdmFacts are the facts --mdm-issues checks, and adds as columns.
+var mdmFacts = []string{"has_mdm", "has_mdm_profile_approved"}
+
+// hasMDMIssue reports whether a device reports false for one of mdmFacts. A
+// fact the device doesn't report is not an issue: iPhones and iPads, for
+// one, don't report has_mdm_profile_approved.
+func hasMDMIssue(d addigy.Device) bool {
+	for _, f := range mdmFacts {
+		if v, ok := d.Value(f); ok && v == false {
+			return true
+		}
+	}
+	return false
+}
+
 // sortField is the fact a locally sorted list is sorted by: --sort, else the
 // first column.
 func (c *DevicesListCmd) sortField(facts []string) string {
@@ -221,12 +252,11 @@ func (c *DevicesListCmd) sortField(facts []string) string {
 	return facts[0]
 }
 
-// fetchAll fetches every device matching the search with the given facts plus
-// extra, which are needed to filter and sort here.
-func (c *DevicesListCmd) fetchAll(app *App, api *addigy.API, facts []string, extra string) ([]addigy.Device, error) {
+// fetchAll fetches every device matching the search, with the given facts.
+func (c *DevicesListCmd) fetchAll(app *App, api *addigy.API, facts []string) ([]addigy.Device, error) {
 	q := addigy.DeviceQuery{
 		Search: c.Search,
-		Facts:  withFact(facts, extra),
+		Facts:  facts,
 		// A fixed, (near-)unique server-side order keeps pages consistent while
 		// they are fetched in parallel; the requested sort is applied afterwards.
 		SortField: addigy.StableSortField,

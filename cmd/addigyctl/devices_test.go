@@ -50,10 +50,11 @@ type deviceServer struct {
 	*httptest.Server
 	mu            sync.Mutex
 	requests      []deviceRequest
-	totalOverride int    // when set, reported in metadata.total instead of the real total
-	policies      string // when set, served instead of policiesFixture
-	rules         string // automatic assignment rules (JSON); default none
-	rulesStatus   int    // when set, the rules endpoint answers this status instead
+	totalOverride int               // when set, reported in metadata.total instead of the real total
+	policies      string            // when set, served instead of policiesFixture
+	rules         string            // automatic assignment rules (JSON); default none
+	rulesStatus   int               // when set, the rules endpoint answers this status instead
+	extraFacts    map[string]string // agent ID → more facts, as raw JSON members
 }
 
 func newDeviceServer(t *testing.T) *deviceServer {
@@ -120,6 +121,9 @@ func newDeviceServer(t *testing.T) *deviceServer {
 					facts += fmt.Sprintf(`,"policy_id":{"type":"string","value":%q}`, d.location)
 					ids, _ := json.Marshal(policyIDs(parent, append([]string{d.location}, d.autoAssigned...)))
 					facts += fmt.Sprintf(`,"policy_ids":{"type":"list","value":%s}`, ids)
+				}
+				if extra := ds.extraFacts[d.id]; extra != "" {
+					facts += "," + extra
 				}
 				items = append(items, fmt.Sprintf(`{"agentid":%q,"facts":{%s}}`, d.id, facts))
 			}
@@ -479,5 +483,43 @@ func TestHasPolicy(t *testing.T) {
 		if got := hasPolicy(dev(tc.facts)); got != tc.want {
 			t.Errorf("%s: hasPolicy = %v, want %v", name, got, tc.want)
 		}
+	}
+}
+
+// mdmFixture: d1 has no MDM, d2 MDM without an approved profile, d3 both,
+// and d4 reports has_mdm only (like an iPhone); the rest report neither.
+var mdmFixture = map[string]string{
+	"d1": `"has_mdm":{"type":"boolean","value":false},"has_mdm_profile_approved":{"type":"boolean","value":false}`,
+	"d2": `"has_mdm":{"type":"boolean","value":true},"has_mdm_profile_approved":{"type":"boolean","value":false}`,
+	"d3": `"has_mdm":{"type":"boolean","value":true},"has_mdm_profile_approved":{"type":"boolean","value":true}`,
+	"d4": `"has_mdm":{"type":"boolean","value":true}`,
+}
+
+func TestDevicesListMDMIssues(t *testing.T) {
+	ds := newDeviceServer(t)
+	ds.extraFacts = mdmFixture
+	r := ds.run(t, false, &DevicesListCmd{MDMIssues: true, Facts: []string{"serial_number"}, Page: 1, PerPage: 50})
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	assertOrdered(t, r.out, "d2", "d1") // by serial number: A-1, B-2
+	assertAbsent(t, r.out, "d3", "d4", "d5", "d6", "d9")
+	for _, want := range []string{"HAS MDM", "HAS MDM PROFILE APPROVED", "2 of 2 devices with MDM issues"} {
+		if !strings.Contains(r.out, want) {
+			t.Errorf("missing %q:\n%s", want, r.out)
+		}
+	}
+
+	// Combined with --policy, both filters apply.
+	ds = newDeviceServer(t)
+	ds.extraFacts = mdmFixture
+	r = ds.run(t, false, &DevicesListCmd{MDMIssues: true, Policy: "finance", Facts: []string{"serial_number"}, Page: 1, PerPage: 50})
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	order(t, r.out, "d2")
+	assertAbsent(t, r.out, "d1", "d3", "d4")
+	if !strings.Contains(r.out, `1 of 1 devices in "Finance" and 1 sub-policy with MDM issues`) {
+		t.Errorf("footer:\n%s", r.out)
 	}
 }
