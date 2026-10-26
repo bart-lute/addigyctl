@@ -27,7 +27,15 @@ type policiesRun struct {
 
 func runPoliciesWith(t *testing.T, g Globals, run func(app *App) error) policiesRun {
 	t.Helper()
+	return runPoliciesOn(t, "", g, run)
+}
+
+// runPoliciesOn is runPoliciesWith with another policy list (JSON) than
+// policiesFixture, if set.
+func runPoliciesOn(t *testing.T, policies string, g Globals, run func(app *App) error) policiesRun {
+	t.Helper()
 	ds := newDeviceServer(t)
+	ds.policies = policies
 	g.APIKey, g.BaseURL = "k", ds.URL+"/api/v2"
 	var out, errOut bytes.Buffer
 	app := &App{Ctx: context.Background(), G: &g, Out: &out, Err: &errOut}
@@ -77,7 +85,7 @@ func TestPoliciesListDefaultShowsRootsOnly(t *testing.T) {
 	if h := strings.Fields(lineContaining(t, out, "POLICY ID")); strings.Join(h, " ") != "POLICY ID NAME DEVICES CHILDREN" {
 		t.Errorf("header = %q", h)
 	}
-	if !strings.Contains(out, "DEVICES counts the devices in a policy and all of its sub-policies") {
+	if !strings.Contains(out, "DEVICES counts the devices a policy applies to, in it or its sub-policies, auto-assigned ones included") {
 		t.Errorf("the DEVICES column should be explained:\n%s", out)
 	}
 }
@@ -123,7 +131,7 @@ func TestPoliciesListNoCountsSkipsTheDeviceFetch(t *testing.T) {
 	}
 }
 
-func TestPoliciesListCountsFetchOnlyTheLocationFact(t *testing.T) {
+func TestPoliciesListCountsFetchOnlyThePolicyIDsFact(t *testing.T) {
 	r := runPoliciesWith(t, Globals{}, (&PoliciesListCmd{}).Run)
 	if r.err != nil {
 		t.Fatal(r.err)
@@ -132,8 +140,8 @@ func TestPoliciesListCountsFetchOnlyTheLocationFact(t *testing.T) {
 		t.Fatal("expected device requests")
 	}
 	for _, req := range r.ds.requests {
-		if len(req.facts) != 1 || req.facts[0] != "policy_id" {
-			t.Errorf("only the policy_id fact should be requested, got %v", req.facts)
+		if len(req.facts) != 1 || req.facts[0] != "policy_ids" {
+			t.Errorf("only the policy_ids fact should be requested, got %v", req.facts)
 		}
 	}
 }
@@ -244,10 +252,127 @@ func TestPoliciesListJSONKeepsRawItems(t *testing.T) {
 	}
 }
 
-func TestPoliciesListRejectsAllWithParent(t *testing.T) {
+// emptyPoliciesFixture is policiesFixture plus policies no device in
+// fixtureDevices is located in; d9 (located in other) is auto-assigned to
+// projects-2024:
+//
+//	acme ─┬─ finance ── fin-laptops
+//	      ├─ sales ── sales-old (empty)
+//	      └─ projects ── projects-2024 (d9, auto-assigned)
+//	other (d9)
+//	archive (empty)
+const emptyPoliciesFixture = `[
+  {"policyId":"acme","name":"Acme","parent":null},
+  {"policyId":"finance","name":"Finance","parent":"acme"},
+  {"policyId":"sales","name":"Sales","parent":"acme"},
+  {"policyId":"fin-laptops","name":"Laptops","parent":"finance"},
+  {"policyId":"other","name":"Other Root","parent":null},
+  {"policyId":"sales-old","name":"Old Sales","parent":"sales"},
+  {"policyId":"projects","name":"Projects","parent":"acme"},
+  {"policyId":"projects-2024","name":"Projects 2024","parent":"projects"},
+  {"policyId":"archive","name":"Archive","parent":null}
+]`
+
+func TestPoliciesListAllBelowParent(t *testing.T) {
+	r := runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{All: true, Parent: "Acme"}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	// Every level below Acme, with the parent column; not Acme itself, nor
+	// anything outside it.
+	for _, want := range []string{"Finance", "Laptops", "Sales", "Old Sales", "Projects 2024", "PARENT", `6 policies below "Acme"`} {
+		if !strings.Contains(r.out, want) {
+			t.Errorf("output missing %q:\n%s", want, r.out)
+		}
+	}
+	for _, unwanted := range []string{"acme ", "Other Root", "Archive"} {
+		if strings.Contains(r.out, unwanted) {
+			t.Errorf("output should not contain %q:\n%s", unwanted, r.out)
+		}
+	}
+}
+
+func TestPoliciesListEmpty(t *testing.T) {
+	ids := func(out string) []string {
+		var got []string
+		for _, id := range []string{"acme", "finance", "fin-laptops", "sales", "sales-old", "projects", "projects-2024", "other", "archive"} {
+			for _, line := range strings.Split(out, "\n") {
+				if f := strings.Fields(line); len(f) > 0 && f[0] == id {
+					got = append(got, id)
+				}
+			}
+		}
+		return got
+	}
+
+	// Counted like Addigy's web app: an auto-assigned device counts for the
+	// policy and its parents, besides counting where it is located.
+	all := runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{All: true}).Run)
+	if all.err != nil {
+		t.Fatal(all.err)
+	}
+	for id, want := range map[string]string{"acme": "6", "projects": "1", "projects-2024": "1", "other": "1", "sales": "1", "sales-old": "0"} {
+		if f := strings.Fields(lineContaining(t, all.out, id+" ")); f[len(f)-3] != want {
+			t.Errorf("DEVICES of %s = %s, want %s (row %q)", id, f[len(f)-3], want, f)
+		}
+	}
+
+	// Every level: only what applies to no device. A parent whose devices
+	// sit in its sub-policies (finance) is not empty, nor is a policy with
+	// only an auto-assigned device (projects-2024) or its parent (projects).
+	r := runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{Empty: true}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if got := strings.Join(ids(r.out), ","); got != "sales-old,archive" {
+		t.Errorf("--empty listed %s:\n%s", got, r.out)
+	}
+	if !strings.Contains(r.out, "2 policies without devices") || !strings.Contains(r.out, "PARENT") {
+		t.Errorf("footer or PARENT column missing:\n%s", r.out)
+	}
+
+	// Below one policy, at every level.
+	r = runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{Empty: true, All: true, Parent: "Acme"}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if got := strings.Join(ids(r.out), ","); got != "sales-old" {
+		t.Errorf("--empty --all --parent Acme listed %s:\n%s", got, r.out)
+	}
+	if !strings.Contains(r.out, `1 policy below "Acme" without devices`) {
+		t.Errorf("footer:\n%s", r.out)
+	}
+
+	// Direct sub-policies only.
+	r = runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{Empty: true, Parent: "Acme"}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if got := ids(r.out); len(got) != 0 {
+		t.Errorf("--empty --parent Acme listed %v:\n%s", got, r.out)
+	}
+	r = runPoliciesOn(t, emptyPoliciesFixture, Globals{}, (&PoliciesListCmd{Empty: true, Parent: "Sales"}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if got := strings.Join(ids(r.out), ","); got != "sales-old" || !strings.Contains(r.out, `1 sub-policy of "Sales" without devices`) {
+		t.Errorf("--empty --parent Sales listed %s:\n%s", got, r.out)
+	}
+
+	// CSV for scripts: the same rows.
+	r = runPoliciesOn(t, emptyPoliciesFixture, Globals{Output: "csv"}, (&PoliciesListCmd{Empty: true}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if recs := parseCSV(t, r.out); len(recs) != 3 || recs[1][0] != "archive" {
+		t.Errorf("csv = %q", recs)
+	}
+}
+
+func TestPoliciesListEmptyNeedsCounts(t *testing.T) {
 	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k"}, Out: io.Discard, Err: io.Discard}
-	if err := (&PoliciesListCmd{All: true, Parent: "x"}).Run(app); err == nil {
-		t.Error("expected an error for --all with --parent")
+	if err := (&PoliciesListCmd{Empty: true, NoCounts: true}).Run(app); err == nil || !strings.Contains(err.Error(), "--no-counts") {
+		t.Errorf("err = %v, want a refusal of --empty with --no-counts", err)
 	}
 }
 
@@ -271,7 +396,7 @@ func TestPoliciesTreeShowsDeviceCounts(t *testing.T) {
 	if !strings.Contains(out, want) {
 		t.Errorf("tree with counts:\n%s\nwant:\n%s", out, want)
 	}
-	if !strings.Contains(out, "[n] = devices in the policy and all of its sub-policies") {
+	if !strings.Contains(out, "[n] = devices the policy applies to, in it or its sub-policies, auto-assigned ones included") {
 		t.Errorf("the [n] notation should be explained:\n%s", out)
 	}
 

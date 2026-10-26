@@ -16,8 +16,13 @@ import (
 	"github.com/ginkio/addigyctl/internal/addigy"
 )
 
-// A device has exactly one location: its policy_id fact.
-type fixtureDevice struct{ id, serial, location string }
+// A device has exactly one location: its policy_id fact. It can also be
+// auto-assigned to other policies; its policy_ids fact then lists those, the
+// location and all their parents, as Addigy does.
+type fixtureDevice struct {
+	id, serial, location string
+	autoAssigned         []string
+}
 
 // Policy hierarchy comes from policiesFixture:
 //
@@ -25,13 +30,13 @@ type fixtureDevice struct{ id, serial, location string }
 //	      └─ sales
 //	other
 var fixtureDevices = []fixtureDevice{
-	{"d1", "B-2", "acme"},
-	{"d2", "A-1", "finance"},
-	{"d3", "C-3", "fin-laptops"},
-	{"d4", "D-4", "fin-laptops"},
-	{"d5", "E-5", "sales"},
-	{"d6", "F-6", ""}, // no location at all
-	{"d9", "Z-9", "other"},
+	{"d1", "B-2", "acme", nil},
+	{"d2", "A-1", "finance", nil},
+	{"d3", "C-3", "fin-laptops", nil},
+	{"d4", "D-4", "fin-laptops", nil},
+	{"d5", "E-5", "sales", nil},
+	{"d6", "F-6", "", nil},                            // no location at all
+	{"d9", "Z-9", "other", []string{"projects-2024"}}, // a policy only emptyPoliciesFixture has
 }
 
 type deviceRequest struct {
@@ -45,7 +50,8 @@ type deviceServer struct {
 	*httptest.Server
 	mu            sync.Mutex
 	requests      []deviceRequest
-	totalOverride int // when set, reported in metadata.total instead of the real total
+	totalOverride int    // when set, reported in metadata.total instead of the real total
+	policies      string // when set, served instead of policiesFixture
 }
 
 func newDeviceServer(t *testing.T) *deviceServer {
@@ -54,7 +60,11 @@ func newDeviceServer(t *testing.T) *deviceServer {
 	ds.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/oa/policies/query":
-			io.WriteString(w, policiesFixture)
+			if ds.policies != "" {
+				io.WriteString(w, ds.policies)
+			} else {
+				io.WriteString(w, policiesFixture)
+			}
 		case "/api/v2/devices":
 			var body struct {
 				Page                   int      `json:"page"`
@@ -89,11 +99,14 @@ func newDeviceServer(t *testing.T) *deviceServer {
 			start := min((page-1)*per, len(list))
 			end := min(start+per, len(list))
 
+			parent := ds.parents()
 			var items []string
 			for _, d := range list[start:end] {
 				facts := fmt.Sprintf(`"serial_number":{"type":"string","value":%q}`, d.serial)
 				if d.location != "" {
 					facts += fmt.Sprintf(`,"policy_id":{"type":"string","value":%q}`, d.location)
+					ids, _ := json.Marshal(policyIDs(parent, append([]string{d.location}, d.autoAssigned...)))
+					facts += fmt.Sprintf(`,"policy_ids":{"type":"list","value":%s}`, ids)
 				}
 				items = append(items, fmt.Sprintf(`{"agentid":%q,"facts":{%s}}`, d.id, facts))
 			}
@@ -110,6 +123,39 @@ func newDeviceServer(t *testing.T) *deviceServer {
 	}))
 	t.Cleanup(ds.Close)
 	return ds
+}
+
+// parents maps each served policy to its parent.
+func (ds *deviceServer) parents() map[string]string {
+	src := ds.policies
+	if src == "" {
+		src = policiesFixture
+	}
+	var pols []struct {
+		ID     string `json:"policyId"`
+		Parent string `json:"parent"`
+	}
+	if err := json.Unmarshal([]byte(src), &pols); err != nil {
+		panic(err)
+	}
+	m := map[string]string{}
+	for _, p := range pols {
+		m[p.ID] = p.Parent
+	}
+	return m
+}
+
+// policyIDs returns the policies and all their parents, once each.
+func policyIDs(parent map[string]string, policies []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range policies {
+		for id := p; id != "" && !seen[id]; id = parent[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 type runResult struct {

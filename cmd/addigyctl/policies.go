@@ -23,18 +23,19 @@ type PoliciesCmd struct {
 // ---- policies list ---------------------------------------------------------
 
 type PoliciesListCmd struct {
-	Parent   string   `help:"List the direct sub-policies of this policy (ID or name)."`
-	All      bool     `help:"List policies at every level (flat) instead of only root policies."`
+	Parent   string   `help:"List the direct sub-policies of this policy (ID or name); with --all, every policy below it."`
+	All      bool     `help:"List policies at every level (flat) instead of only root policies; with --parent, every level below that policy."`
 	IDs      []string `name:"id" help:"Only these policy IDs (comma-separated or repeated); searches all levels."`
 	Name     string   `help:"Only policies whose name contains this text (case-insensitive); searches all levels unless --parent is set."`
+	Empty    bool     `help:"Only policies that apply to no device (DEVICES is 0): none located in them or their sub-policies, and none auto-assigned. Searches all levels unless --parent is set."`
 	NoCounts bool     `name:"no-counts" help:"Skip the DEVICES column (saves fetching every device)."`
 	Sort     string   `help:"Column to sort by: name (default), id, devices, children or parent. devices/children default to most first; the rest to A-Z."`
 	Desc     bool     `help:"Reverse the column's default order (fewest first for devices/children; descending for the rest)."`
 }
 
 func (c *PoliciesListCmd) Run(app *App) error {
-	if c.All && c.Parent != "" {
-		return errors.New("--all and --parent cannot be combined")
+	if c.Empty && c.NoCounts {
+		return errors.New("--empty needs the device counts, so it cannot be combined with --no-counts")
 	}
 	api, err := app.API()
 	if err != nil {
@@ -54,6 +55,14 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		rootView   bool
 	)
 	switch {
+	case c.Parent != "" && c.All:
+		parent, err := idx.Resolve(c.Parent)
+		if err != nil {
+			return err
+		}
+		scope = idx.Subtree(parent.ID)[1:] // the parent itself comes first
+		suffix = fmt.Sprintf(" below %q", parent.Name)
+		showParent = true
 	case c.Parent != "":
 		parent, err := idx.Resolve(c.Parent)
 		if err != nil {
@@ -62,7 +71,7 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		scope = idx.Children(parent.ID)
 		one, many = "sub-policy", "sub-policies"
 		suffix = fmt.Sprintf(" of %q", parent.Name)
-	case c.All || c.Name != "" || len(c.IDs) > 0:
+	case c.All || c.Name != "" || len(c.IDs) > 0 || c.Empty:
 		scope = idx.All()
 		showParent = true
 	default:
@@ -89,9 +98,20 @@ func (c *PoliciesListCmd) Run(app *App) error {
 
 	var devices map[string]int // devices per policy, including sub-policies
 	if !c.NoCounts {
-		if devices, err = countDevices(app, api, idx); err != nil {
+		if devices, err = countDevices(app, api); err != nil {
 			return err
 		}
+	}
+
+	if c.Empty {
+		kept := shown[:0]
+		for _, p := range shown {
+			if devices[p.ID] == 0 {
+				kept = append(kept, p)
+			}
+		}
+		shown = kept
+		suffix += " without devices"
 	}
 
 	if err := sortPolicyRows(shown, idx, devices, c.Sort, c.Desc); err != nil {
@@ -145,7 +165,7 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		fmt.Fprintln(app.Out, "Use --parent <id|name> for sub-policies, --all for every level, or 'policies tree'.")
 	}
 	if devices != nil && !app.csv() {
-		fmt.Fprintln(app.Out, "DEVICES counts the devices in a policy and all of its sub-policies.")
+		fmt.Fprintln(app.Out, "DEVICES counts the devices a policy applies to, in it or its sub-policies, auto-assigned ones included (as Addigy's web app does).")
 	}
 	return nil
 }
@@ -199,7 +219,7 @@ func (c *PoliciesTreeCmd) Run(app *App) error {
 
 	counted := !c.NoCounts
 	if counted {
-		totals, err := countDevices(app, api, idx)
+		totals, err := countDevices(app, api)
 		if err != nil {
 			return err
 		}
@@ -220,7 +240,7 @@ func (c *PoliciesTreeCmd) Run(app *App) error {
 	policytree.Write(app.Out, nodes, c.IDs)
 	app.footer("%s", count(policytree.CountNodes(nodes), "policy", "policies"))
 	if counted {
-		fmt.Fprintln(app.Out, "[n] = devices in the policy and all of its sub-policies.")
+		fmt.Fprintln(app.Out, "[n] = devices the policy applies to, in it or its sub-policies, auto-assigned ones included.")
 	}
 	return nil
 }

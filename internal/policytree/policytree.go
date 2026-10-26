@@ -251,18 +251,6 @@ func (x *Index) Rows(nodes []Node, depth int) [][]string {
 	return rows
 }
 
-// RollUp turns per-policy device counts (devices located directly in a policy)
-// into totals that include every sub-policy.
-func (x *Index) RollUp(direct map[string]int) map[string]int {
-	totals := make(map[string]int, len(x.all))
-	for _, p := range x.all {
-		for _, m := range x.Subtree(p.ID) {
-			totals[p.ID] += direct[m.ID]
-		}
-	}
-	return totals
-}
-
 func CountNodes(nodes []Node) int {
 	n := len(nodes)
 	for _, c := range nodes {

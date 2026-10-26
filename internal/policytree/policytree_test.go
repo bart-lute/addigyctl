@@ -196,20 +196,6 @@ func TestTreeJSONShape(t *testing.T) {
 	}
 }
 
-func TestRollUpIncludesSubPolicies(t *testing.T) {
-	x := New(testPolicies())
-	got := x.RollUp(map[string]int{"acme": 1, "finance": 2, "fin-laptops": 4, "sales-laptops": 8, "unknown": 100})
-	want := map[string]int{"acme": 15, "finance": 6, "fin-laptops": 4, "sales": 8, "sales-laptops": 8, "orphan": 0}
-	for id, n := range want {
-		if got[id] != n {
-			t.Errorf("total[%s] = %d, want %d", id, got[id], n)
-		}
-	}
-	if len(got) != len(x.all) {
-		t.Errorf("every policy needs a total, got %v", got)
-	}
-}
-
 func TestTreeLabelWithCounts(t *testing.T) {
 	three := 3
 	zero := 0

@@ -99,6 +99,9 @@ Addigy policies are a flat list with a `parent` field. addigyctl builds the hier
 addigyctl policies list                      # root policies only
 addigyctl policies list --parent Acme        # direct sub-policies (ID or name)
 addigyctl policies list --all                # every level, flat
+addigyctl policies list --all --parent Acme  # every level below Acme, flat
+addigyctl policies list --empty              # policies without any device, at every level
+addigyctl policies list --empty --all --parent "Acme / Clients"  # empty policies below one branch
 addigyctl policies list --name laptop        # name contains text, any level
 addigyctl policies list --id <id> --id <id>  # specific policies
 addigyctl policies list --sort devices       # busiest policies first
@@ -109,7 +112,7 @@ addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
 
 Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a name is ambiguous, the error lists the candidates with their IDs and paths.
 
-The `DEVICES` column (and the `[n]` in the tree) counts the devices in a policy and all of its sub-policies, which is the same set `devices list --policy` returns. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
+The `DEVICES` column (and the `[n]` in the tree) counts the devices a policy applies to, the way Addigy's web app counts them: devices located in it or in any of its sub-policies, and devices auto-assigned to it or to one of its sub-policies, each device once. It is taken from every device's `policy_ids` fact, which lists exactly those policies. `devices list --policy` lists only the devices *located* in a policy, so for a policy that is only auto-assigned it can show fewer devices than `DEVICES`. `--empty` keeps the policies where the count is 0: no device located in them or below them, and none auto-assigned, such as the policy of a client that left. A parent whose devices all sit in its sub-policies is not empty. It searches every level, like `--name`; with `--parent` only the direct sub-policies, and with `--all --parent` every level below that policy, which leaves out branches that are empty on purpose elsewhere in the tree. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
 
 ### Devices
 
