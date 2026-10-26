@@ -433,3 +433,51 @@ func contains(list []string, s string) bool {
 	}
 	return false
 }
+
+func TestDevicesListNoPolicy(t *testing.T) {
+	ds := newDeviceServer(t)
+	r := ds.run(t, false, &DevicesListCmd{NoPolicy: true, Facts: []string{"serial_number"}, Page: 1, PerPage: 50})
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	order(t, r.out, "d6")
+	assertAbsent(t, r.out, "d1", "d2", "d3", "d4", "d5", "d9")
+	if !strings.Contains(r.out, "1 of 1 devices without any policy") {
+		t.Errorf("footer missing:\n%s", r.out)
+	}
+	for _, req := range ds.requests {
+		for _, f := range []string{"serial_number", addigy.LocationFact, policyIDsFact} {
+			if !contains(req.facts, f) {
+				t.Errorf("request lacks fact %s: %v", f, req.facts)
+			}
+		}
+	}
+
+	if r := ds.run(t, false, &DevicesListCmd{NoPolicy: true, Policy: "acme", Page: 1, PerPage: 50}); r.err == nil {
+		t.Error("--no-policy with --policy should fail")
+	}
+}
+
+func TestHasPolicy(t *testing.T) {
+	dev := func(facts map[string]any) addigy.Device {
+		d := addigy.Device{Facts: map[string]addigy.Fact{}}
+		for k, v := range facts {
+			d.Facts[k] = addigy.Fact{Value: v}
+		}
+		return d
+	}
+	for name, tc := range map[string]struct {
+		facts map[string]any
+		want  bool
+	}{
+		"no facts":         {nil, false},
+		"empty values":     {map[string]any{"policy_id": "", "policy_ids": []any{}}, false},
+		"null values":      {map[string]any{"policy_id": nil, "policy_ids": nil}, false},
+		"location":         {map[string]any{"policy_id": "acme"}, true},
+		"applied policies": {map[string]any{"policy_ids": []any{"acme"}}, true},
+	} {
+		if got := hasPolicy(dev(tc.facts)); got != tc.want {
+			t.Errorf("%s: hasPolicy = %v, want %v", name, got, tc.want)
+		}
+	}
+}

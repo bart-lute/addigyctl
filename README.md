@@ -126,11 +126,12 @@ addigyctl devices list -f serial_number,device_name,os_version,battery_percent
 addigyctl devices list --sort device_name --desc
 addigyctl devices list --policy "Acme / Finance"           # located in it or any sub-policy
 addigyctl devices list --policy "Acme / Finance" --direct  # located in exactly that policy
+addigyctl devices list --no-policy                         # devices without any policy
 addigyctl devices get C02XXXXXXXXX             # agent ID, serial number or device name
 addigyctl devices policies <agent-id>          # policies assigned to a device
 ```
 
-A device has exactly one *location*: its `policy_id` fact. The separate `policy_ids` fact lists every policy that applies to it, which is a different question. `--policy` filters on the location, and adds a `LOCATION` column when sub-policies are included. Addigy cannot filter on a policy subtree itself, so with `--policy` the devices are fetched (a few pages in parallel), filtered, sorted and paginated locally.
+A device has exactly one *location*: its `policy_id` fact. The separate `policy_ids` fact lists every policy that applies to it, which is a different question. `--policy` filters on the location, and adds a `LOCATION` column when sub-policies are included. Addigy cannot filter on a policy subtree itself, so with `--policy` the devices are fetched (a few pages in parallel), filtered, sorted and paginated locally. `--no-policy` lists the devices that have neither: no location and no policy applying to them. It fetches every device the same way.
 
 #### Exporting to Excel
 

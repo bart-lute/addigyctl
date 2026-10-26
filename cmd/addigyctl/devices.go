@@ -27,20 +27,24 @@ type DevicesCmd struct {
 // ---- devices list ----------------------------------------------------------
 
 type DevicesListCmd struct {
-	Search  string   `arg:"" optional:"" help:"Free-text search across device facts."`
-	Policy  string   `help:"Only devices located in this policy or any of its sub-policies (a device's location is its policy_id fact). Accepts an ID, a name, or a 'Parent / Child' path."`
-	Direct  bool     `help:"With --policy: only devices located directly in that policy, not in its sub-policies."`
-	Facts   []string `name:"fact" short:"f" help:"Fact identifiers to show as columns (comma-separated or repeated). Default: config device_facts, else serial_number,device_name,os_version."`
-	Sort    string   `help:"Fact identifier to sort by. With --policy the default is the first --fact column."`
-	Desc    bool     `help:"Sort descending."`
-	Page    int      `default:"1" help:"Page number."`
-	PerPage int      `name:"per-page" default:"50" help:"Devices per page."`
-	All     bool     `help:"Fetch all pages."`
+	Search   string   `arg:"" optional:"" help:"Free-text search across device facts."`
+	Policy   string   `help:"Only devices located in this policy or any of its sub-policies (a device's location is its policy_id fact). Accepts an ID, a name, or a 'Parent / Child' path."`
+	Direct   bool     `help:"With --policy: only devices located directly in that policy, not in its sub-policies."`
+	NoPolicy bool     `name:"no-policy" help:"Only devices without any policy: no location (policy_id) and no policy applying to them (policy_ids)."`
+	Facts    []string `name:"fact" short:"f" help:"Fact identifiers to show as columns (comma-separated or repeated). Default: config device_facts, else serial_number,device_name,os_version."`
+	Sort     string   `help:"Fact identifier to sort by. With --policy or --no-policy the default is the first --fact column."`
+	Desc     bool     `help:"Sort descending."`
+	Page     int      `default:"1" help:"Page number."`
+	PerPage  int      `name:"per-page" default:"50" help:"Devices per page."`
+	All      bool     `help:"Fetch all pages."`
 }
 
 func (c *DevicesListCmd) Run(app *App) error {
 	if c.Direct && c.Policy == "" {
 		return errors.New("--direct only makes sense together with --policy")
+	}
+	if c.NoPolicy && c.Policy != "" {
+		return errors.New("--no-policy and --policy cannot be combined")
 	}
 	api, err := app.API()
 	if err != nil {
@@ -54,9 +58,12 @@ func (c *DevicesListCmd) Run(app *App) error {
 		scope   string
 		locate  func(addigy.Device) string // optional LOCATION column
 	)
-	if c.Policy == "" {
+	switch {
+	case c.NoPolicy:
+		devices, meta, scope, err = c.searchNoPolicy(app, api, facts)
+	case c.Policy == "":
 		devices, meta, err = c.searchServerSide(app, api, facts)
-	} else {
+	default:
 		devices, meta, scope, locate, err = c.searchPolicy(app, api, facts)
 	}
 	if err != nil {
@@ -148,25 +155,10 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 
 	member := idx.Members(root.ID, c.Direct)
 
-	sortField := c.Sort
-	if sortField == "" {
-		sortField = facts[0]
-	}
-	q := addigy.DeviceQuery{
-		Search: c.Search,
-		// The location and the sort field must be returned to filter and sort on them.
-		Facts: withFact(withFact(facts, sortField), addigy.LocationFact),
-		// A fixed, (near-)unique server-side order keeps pages consistent while
-		// they are fetched in parallel; the requested sort is applied below.
-		SortField: addigy.StableSortField,
-		PerPage:   fetchPageSize,
-	}
-	all, reported, err := api.AllDevices(app.Ctx, q)
+	sortField := c.sortField(facts)
+	all, err := c.fetchAll(app, api, withFact(facts, sortField), addigy.LocationFact)
 	if err != nil {
 		return nil, none, "", nil, err
-	}
-	if reported > 0 && len(all) != reported {
-		fmt.Fprintf(app.Err, "warning: Addigy reported %d devices but %d were received; the list may be incomplete\n", reported, len(all))
 	}
 
 	located := addigy.LocatedIn(all, member)
@@ -187,6 +179,67 @@ func (c *DevicesListCmd) searchPolicy(app *App, api *addigy.API, facts []string)
 		}
 	}
 	return shown, meta, scope, locate, nil
+}
+
+// searchNoPolicy lists the devices without any policy: no location and no
+// policy that applies to them. Addigy can't filter on a missing value, so
+// this fetches every device and filters here, like searchPolicy.
+func (c *DevicesListCmd) searchNoPolicy(app *App, api *addigy.API, facts []string) ([]addigy.Device, addigy.PageMetadata, string, error) {
+	sortField := c.sortField(facts)
+	all, err := c.fetchAll(app, api, withFact(withFact(facts, sortField), addigy.LocationFact), policyIDsFact)
+	if err != nil {
+		return nil, addigy.PageMetadata{}, "", err
+	}
+	var without []addigy.Device
+	for _, d := range all {
+		if !hasPolicy(d) {
+			without = append(without, d)
+		}
+	}
+	sortDevices(without, sortField, c.Desc)
+	shown, meta := paginate(without, c.Page, c.PerPage, c.All)
+	return shown, meta, " without any policy", nil
+}
+
+// hasPolicy reports whether a device has a location or any policy that
+// applies to it.
+func hasPolicy(d addigy.Device) bool {
+	if v, _ := d.Value(addigy.LocationFact); v != nil && v != "" {
+		return true
+	}
+	v, _ := d.Value(policyIDsFact)
+	ids, _ := v.([]any)
+	return len(ids) > 0
+}
+
+// sortField is the fact a locally sorted list is sorted by: --sort, else the
+// first column.
+func (c *DevicesListCmd) sortField(facts []string) string {
+	if c.Sort != "" {
+		return c.Sort
+	}
+	return facts[0]
+}
+
+// fetchAll fetches every device matching the search with the given facts plus
+// extra, which are needed to filter and sort here.
+func (c *DevicesListCmd) fetchAll(app *App, api *addigy.API, facts []string, extra string) ([]addigy.Device, error) {
+	q := addigy.DeviceQuery{
+		Search: c.Search,
+		Facts:  withFact(facts, extra),
+		// A fixed, (near-)unique server-side order keeps pages consistent while
+		// they are fetched in parallel; the requested sort is applied afterwards.
+		SortField: addigy.StableSortField,
+		PerPage:   fetchPageSize,
+	}
+	all, reported, err := api.AllDevices(app.Ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	if reported > 0 && len(all) != reported {
+		fmt.Fprintf(app.Err, "warning: Addigy reported %d devices but %d were received; the list may be incomplete\n", reported, len(all))
+	}
+	return all, nil
 }
 
 // factCell renders one fact of a device. Tables show "-" for missing facts and
