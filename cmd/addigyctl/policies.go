@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -103,6 +104,13 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		}
 	}
 
+	// AUTO-ASSIGN per policy: "true", "disabled" or "" (no rule); nil when
+	// the API key may not read the rules.
+	autoAssign, err := autoAssignStatus(app, api)
+	if err != nil {
+		return err
+	}
+
 	if c.Empty {
 		kept := shown[:0]
 		for _, p := range shown {
@@ -122,8 +130,15 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		raws := make([]json.RawMessage, len(shown))
 		for i, p := range shown {
 			raws[i] = p.Raw
+			fields := map[string]any{}
 			if devices != nil {
-				if raws[i], err = withDeviceCount(p.Raw, devices[p.ID]); err != nil {
+				fields["deviceCount"] = devices[p.ID]
+			}
+			if s := autoAssign[p.ID]; s != "" {
+				fields["autoAssign"] = s
+			}
+			if len(fields) > 0 {
+				if raws[i], err = withFields(p.Raw, fields); err != nil {
 					return err
 				}
 			}
@@ -134,6 +149,9 @@ func (c *PoliciesListCmd) Run(app *App) error {
 	headers := []string{"POLICY ID", "NAME"}
 	if devices != nil {
 		headers = append(headers, "DEVICES")
+	}
+	if autoAssign != nil {
+		headers = append(headers, "AUTO-ASSIGN")
 	}
 	headers = append(headers, "CHILDREN")
 	// CSV always carries the PARENT column so its layout doesn't depend on the flags.
@@ -146,6 +164,9 @@ func (c *PoliciesListCmd) Run(app *App) error {
 		row := []string{p.ID, app.cell(p.Name)}
 		if devices != nil {
 			row = append(row, strconv.Itoa(devices[p.ID]))
+		}
+		if autoAssign != nil {
+			row = append(row, app.cell(autoAssign[p.ID]))
 		}
 		row = append(row, strconv.Itoa(len(idx.Children(p.ID))))
 		if withParent {
@@ -170,14 +191,20 @@ func (c *PoliciesListCmd) Run(app *App) error {
 	return nil
 }
 
-// withDeviceCount adds a "deviceCount" field to a raw policy object; every
-// other field is passed through untouched.
-func withDeviceCount(raw json.RawMessage, n int) (json.RawMessage, error) {
+// withFields adds fields to a raw policy object; every other field is
+// passed through untouched.
+func withFields(raw json.RawMessage, fields map[string]any) (json.RawMessage, error) {
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &obj); err != nil {
 		return nil, fmt.Errorf("unexpected policy JSON: %w", err)
 	}
-	obj["deviceCount"] = json.RawMessage(strconv.Itoa(n))
+	for k, v := range fields {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		obj[k] = b
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -185,6 +212,43 @@ func withDeviceCount(raw json.RawMessage, n int) (json.RawMessage, error) {
 		return nil, err
 	}
 	return bytes.TrimSpace(buf.Bytes()), nil
+}
+
+// autoAssignPermission is the API key permission the assignment rules need.
+const autoAssignPermission = "Automatic Policy Assignments"
+
+// autoAssignStatus returns, per policy ID, "true" when the policy has an
+// enabled automatic assignment rule and "disabled" when its only rules are
+// switched off. Policies without a rule are missing from the map. When the
+// API key may not read the rules, it warns and returns nil, so the column is
+// left out rather than shown as all false.
+func autoAssignStatus(app *App, api *addigy.API) (map[string]string, error) {
+	org, err := app.OrgID()
+	if err != nil {
+		return nil, err
+	}
+	rules, err := api.AutoAssignRules(app.Ctx, org)
+	var apiErr *addigy.APIError
+	if errors.As(err, &apiErr) && (apiErr.Status == http.StatusUnauthorized || apiErr.Status == http.StatusForbidden) {
+		fmt.Fprintf(app.Err, "note: the AUTO-ASSIGN column needs the API key permission %q; leaving it out\n", autoAssignPermission)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("fetching automatic policy assignment rules: %w", err)
+	}
+	status := map[string]string{}
+	for _, r := range rules {
+		if r.Action != "assign" || r.PolicyID == "" {
+			continue // "unassign" rules only undo an assign rule
+		}
+		switch {
+		case !r.Disabled:
+			status[r.PolicyID] = "true"
+		case status[r.PolicyID] == "":
+			status[r.PolicyID] = "disabled"
+		}
+	}
+	return status, nil
 }
 
 // ---- policies tree ---------------------------------------------------------

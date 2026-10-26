@@ -388,6 +388,55 @@ func (a *API) QueryPolicies(ctx context.Context, ids []string) ([]Policy, error)
 	return pols, nil
 }
 
+// AutoAssignRule is an automatic policy assignment rule: it adds the devices
+// that meet its conditions to a policy ("assign") or removes them again when
+// they no longer do ("unassign").
+type AutoAssignRule struct {
+	RuleID   string
+	PolicyID string
+	Action   string // "assign" or "unassign"
+	Disabled bool
+}
+
+// AutoAssignRules lists the automatic policy assignment rules
+// (GET /o/{organization_id}/policies/rules/). It needs the API key
+// permission "Automatic Policy Assignments". The policy a rule belongs to
+// and its action are tags on the rule; the spec doesn't document them.
+func (a *API) AutoAssignRules(ctx context.Context, orgID string) ([]AutoAssignRule, error) {
+	resp, err := a.c.GetPolicyAssignmentRulesWithResponse(ctx, orgID, trailingSlash)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		RuleID   string `json:"rule_id"`
+		Disabled bool   `json:"disabled"`
+		Tags     []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		} `json:"tags"`
+	}
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, fmt.Errorf("decoding policy assignment rules: %w", err)
+	}
+	rules := make([]AutoAssignRule, 0, len(raw))
+	for _, r := range raw {
+		rule := AutoAssignRule{RuleID: r.RuleID, Disabled: r.Disabled}
+		for _, t := range r.Tags {
+			switch t.Key {
+			case "policy_id":
+				rule.PolicyID = t.Value
+			case "action":
+				rule.Action = t.Value
+			}
+		}
+		rules = append(rules, rule)
+	}
+	return rules, nil
+}
+
 // ---- Facts -----------------------------------------------------------------
 
 // FactDef describes a fact that can be queried on devices.

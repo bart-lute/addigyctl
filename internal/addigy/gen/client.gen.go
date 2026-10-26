@@ -393,6 +393,14 @@ type AuditorServiceOSArchitectures struct {
 	LinuxArm    *AuditorServiceFactOSArchitecture `json:"linux_arm,omitempty"`
 }
 
+// CorrelationEngineRule defines model for correlation_engine.Rule.
+type CorrelationEngineRule struct {
+	Created  *string `json:"created,omitempty"`
+	Disabled *bool   `json:"disabled,omitempty"`
+	RuleId   *string `json:"rule_id,omitempty"`
+	Script   *string `json:"script,omitempty"`
+}
+
 // DeviceEntitiesAuditFilter defines model for device_entities.AuditFilter.
 type DeviceEntitiesAuditFilter struct {
 	// AuditField Example: device_model_name
@@ -1773,6 +1781,13 @@ type ClientInterface interface {
 	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 	DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPolicyAssignmentRules Get policy assignment rules.
+	//
+	// Get policy assignment rules. <br><b>Permission Required: </b>.Automatic Policy Assignments
+	//
+	// Corresponds with GET /o/{organization_id}/policies/rules (the `GetPolicyAssignmentRules` operationId).
+	GetPolicyAssignmentRules(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateSmartSoftwareWithBody Creates a new smart software item.
 	//
 	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
@@ -2083,6 +2098,23 @@ func (c *Client) GetAvailableFacts(ctx context.Context, organizationId string, r
 // Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 func (c *Client) DeleteOrganizationFile(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteOrganizationFileRequest(c.Server, organizationId, fileId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetPolicyAssignmentRules Get policy assignment rules.
+//
+// Get policy assignment rules. <br><b>Permission Required: </b>.Automatic Policy Assignments
+//
+// Corresponds with GET /o/{organization_id}/policies/rules (the `GetPolicyAssignmentRules` operationId).
+func (c *Client) GetPolicyAssignmentRules(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPolicyAssignmentRulesRequest(c.Server, organizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -2669,6 +2701,40 @@ func NewDeleteOrganizationFileRequest(server string, organizationId string, file
 	}
 
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPolicyAssignmentRulesRequest constructs an http.Request for the GetPolicyAssignmentRules method
+func NewGetPolicyAssignmentRulesRequest(server string, organizationId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_id", organizationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/o/%s/policies/rules", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -3339,6 +3405,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /o/{organization_id}/files/{file_id} (the `DeleteOrganizationFile` operationId).
 	DeleteOrganizationFileWithResponse(ctx context.Context, organizationId string, fileId string, reqEditors ...RequestEditorFn) (*DeleteOrganizationFileResponse, error)
 
+	// GetPolicyAssignmentRulesWithResponse Get policy assignment rules.
+	//
+	// Get policy assignment rules. <br><b>Permission Required: </b>.Automatic Policy Assignments
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /o/{organization_id}/policies/rules (the `GetPolicyAssignmentRules` operationId).
+	GetPolicyAssignmentRulesWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetPolicyAssignmentRulesResponse, error)
+
 	// CreateSmartSoftwareWithBodyWithResponse Creates a new smart software item.
 	//
 	// Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
@@ -3803,6 +3878,54 @@ func (r DeleteOrganizationFileResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r DeleteOrganizationFileResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPolicyAssignmentRulesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]CorrelationEngineRule
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetPolicyAssignmentRulesResponse) GetJSON200() *[]CorrelationEngineRule {
+	return r.JSON200
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPolicyAssignmentRulesResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetPolicyAssignmentRulesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPolicyAssignmentRulesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPolicyAssignmentRulesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPolicyAssignmentRulesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -4601,6 +4724,21 @@ func (c *ClientWithResponses) DeleteOrganizationFileWithResponse(ctx context.Con
 	return ParseDeleteOrganizationFileResponse(rsp)
 }
 
+// GetPolicyAssignmentRulesWithResponse Get policy assignment rules.
+//
+// Get policy assignment rules. <br><b>Permission Required: </b>.Automatic Policy Assignments
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /o/{organization_id}/policies/rules (the `GetPolicyAssignmentRules` operationId).
+func (c *ClientWithResponses) GetPolicyAssignmentRulesWithResponse(ctx context.Context, organizationId string, reqEditors ...RequestEditorFn) (*GetPolicyAssignmentRulesResponse, error) {
+	rsp, err := c.GetPolicyAssignmentRules(ctx, organizationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPolicyAssignmentRulesResponse(rsp)
+}
+
 // CreateSmartSoftwareWithBodyWithResponse Creates a new smart software item.
 //
 // Creates a new smart software item. <br> <br> <b>Permission Required:</b> Create Smart Software.
@@ -5084,6 +5222,39 @@ func ParseDeleteOrganizationFileResponse(rsp *http.Response) (*DeleteOrganizatio
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPolicyAssignmentRulesResponse parses an HTTP response from a GetPolicyAssignmentRulesWithResponse call
+func ParseGetPolicyAssignmentRulesResponse(rsp *http.Response) (*GetPolicyAssignmentRulesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPolicyAssignmentRulesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []CorrelationEngineRule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ResponseEntitiesErrorResponse

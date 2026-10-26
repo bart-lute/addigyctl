@@ -32,3 +32,4 @@ output-options:
     - DeleteOrganizationFile
     - GetStaticFields
     - GetStaticFieldValues
+    - GetPolicyAssignmentRules

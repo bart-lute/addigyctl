@@ -499,3 +499,41 @@ func TestAllDevicesStopsOnError(t *testing.T) {
 		t.Errorf("err = %v, want the page 2 error", err)
 	}
 }
+
+func TestAutoAssignRules(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		// Addigy redirects .../policies/rules to .../policies/rules/; ask for the latter directly.
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/o/org1/policies/rules/" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		io.WriteString(w, `[
+		  {"rule_id":"r1","disabled":false,"script":"...","metadata":{"filters":[]},
+		   "tags":[{"key":"policy_id","value":"p1"},{"key":"type","value":"auto-assignment"},{"key":"action","value":"assign"}]},
+		  {"rule_id":"r2","disabled":true,
+		   "tags":[{"key":"policy_id","value":"p1"},{"key":"action","value":"unassign"},{"key":"rule_id","value":"r1"}]}
+		]`)
+	})
+	rules, err := api.AutoAssignRules(context.Background(), "org1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AutoAssignRule{
+		{RuleID: "r1", PolicyID: "p1", Action: "assign"},
+		{RuleID: "r2", PolicyID: "p1", Action: "unassign", Disabled: true},
+	}
+	if len(rules) != 2 || rules[0] != want[0] || rules[1] != want[1] {
+		t.Errorf("rules = %+v", rules)
+	}
+}
+
+func TestAutoAssignRulesWithoutPermission(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, `{"code":403,"message":"Do not have permission to perform this action."}`)
+	})
+	_, err := api.AutoAssignRules(context.Background(), "org1")
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusForbidden {
+		t.Errorf("err = %v, want a 403 APIError", err)
+	}
+}

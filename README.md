@@ -112,7 +112,9 @@ addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
 
 Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a name is ambiguous, the error lists the candidates with their IDs and paths.
 
-The `DEVICES` column (and the `[n]` in the tree) counts the devices a policy applies to, the way Addigy's web app counts them: devices located in it or in any of its sub-policies, and devices auto-assigned to it or to one of its sub-policies, each device once. It is taken from every device's `policy_ids` fact, which lists exactly those policies. `devices list --policy` lists only the devices *located* in a policy, so for a policy that is only auto-assigned it can show fewer devices than `DEVICES`. `--empty` keeps the policies where the count is 0: no device located in them or below them, and none auto-assigned, such as the policy of a client that left. A parent whose devices all sit in its sub-policies is not empty. It searches every level, like `--name`; with `--parent` only the direct sub-policies, and with `--all --parent` every level below that policy, which leaves out branches that are empty on purpose elsewhere in the tree. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
+The `DEVICES` column (and the `[n]` in the tree) counts the devices a policy applies to, the way Addigy's web app counts them: devices located in it or in any of its sub-policies, and devices auto-assigned to it or to one of its sub-policies, each device once. It is taken from every device's `policy_ids` fact, which lists exactly those policies. `devices list --policy` lists only the devices *located* in a policy, so for a policy that is only auto-assigned it can show fewer devices than `DEVICES`. `--empty` keeps the policies where the count is 0: no device located in them or below them, and none auto-assigned, such as the policy of a client that left. A parent whose devices all sit in its sub-policies is not empty. It searches every level, like `--name`; with `--parent` only the direct sub-policies, and with `--all --parent` every level below that policy, which leaves out branches that are empty on purpose elsewhere in the tree. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it.
+
+The `AUTO-ASSIGN` column shows whether a policy has an automatic assignment rule, as the web app's Auto-Assign column does: `true` for an enabled rule, `disabled` when its rules are all disabled, and empty otherwise (`-` in a table; the JSON field `autoAssign` is then left out). Rules that only unassign don't count. Reading the rules needs the API key permission "Automatic Policy Assignments"; without it the column is left out and a note says so. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
 
 ### Devices
 
@@ -291,7 +293,7 @@ addigyctl policies tree -o csv     # flat: POLICY ID, NAME, PATH, DEPTH, DEVICES
 addigyctl devices list -j | jq '.items[].agentid'
 ```
 
-`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version`, `delete` and `restore`, and `files delete` print a summary, or with `-j` a stable JSON result for scripts (their previews then go to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
+`policies get`, `smart-software get` and `config show` only print JSON. `smart-software export`, `new-version`, `delete` and `restore`, and `files delete` print a summary, or with `-j` a stable JSON result for scripts (their previews then go to stderr). The JSON output of `policies list` and `policies tree` gains a `deviceCount` field (unless `--no-counts` is used), that of `policies list` also an `autoAssign` field (see [Policies](#policies)), and that of `files list` a `usages` array per file, as Addigy returns it; everything else is passed through exactly as Addigy returns it.
 
 Warnings and `--debug` request logs go to stderr, so they never end up in piped output.
 
@@ -304,12 +306,12 @@ addigyctl policies list --borders
 ```
 
 ```
-┌───────────┬────────────┬─────────┬──────────┐
-│ POLICY ID │ NAME       │ DEVICES │ CHILDREN │
-├───────────┼────────────┼─────────┼──────────┤
-│ acme      │ Acme       │ 5       │ 2        │
-│ other     │ Other Root │ 1       │ 0        │
-└───────────┴────────────┴─────────┴──────────┘
+┌───────────┬────────────┬─────────┬─────────────┬──────────┐
+│ POLICY ID │ NAME       │ DEVICES │ AUTO-ASSIGN │ CHILDREN │
+├───────────┼────────────┼─────────┼─────────────┼──────────┤
+│ acme      │ Acme       │ 5       │ -           │ 2        │
+│ other     │ Other Root │ 1       │ true        │ 0        │
+└───────────┴────────────┴─────────┴─────────────┴──────────┘
 ```
 
 ## Regenerating the client

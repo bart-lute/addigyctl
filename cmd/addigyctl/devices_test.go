@@ -52,6 +52,8 @@ type deviceServer struct {
 	requests      []deviceRequest
 	totalOverride int    // when set, reported in metadata.total instead of the real total
 	policies      string // when set, served instead of policiesFixture
+	rules         string // automatic assignment rules (JSON); default none
+	rulesStatus   int    // when set, the rules endpoint answers this status instead
 }
 
 func newDeviceServer(t *testing.T) *deviceServer {
@@ -65,6 +67,17 @@ func newDeviceServer(t *testing.T) *deviceServer {
 			} else {
 				io.WriteString(w, policiesFixture)
 			}
+		case "/api/v2/o/org1/policies/rules/":
+			if ds.rulesStatus != 0 {
+				w.WriteHeader(ds.rulesStatus)
+				io.WriteString(w, `{"message":"Do not have permission to perform this action."}`)
+				return
+			}
+			if ds.rules == "" {
+				io.WriteString(w, `[]`)
+				return
+			}
+			io.WriteString(w, ds.rules)
 		case "/api/v2/devices":
 			var body struct {
 				Page                   int      `json:"page"`

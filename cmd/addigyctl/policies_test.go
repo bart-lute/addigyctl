@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -34,9 +35,16 @@ func runPoliciesWith(t *testing.T, g Globals, run func(app *App) error) policies
 // policiesFixture, if set.
 func runPoliciesOn(t *testing.T, policies string, g Globals, run func(app *App) error) policiesRun {
 	t.Helper()
-	ds := newDeviceServer(t)
+	return runPoliciesOnServer(t, newDeviceServer(t), policies, g, run)
+}
+
+func runPoliciesOnServer(t *testing.T, ds *deviceServer, policies string, g Globals, run func(app *App) error) policiesRun {
+	t.Helper()
 	ds.policies = policies
 	g.APIKey, g.BaseURL = "k", ds.URL+"/api/v2"
+	if g.OrgID == "" {
+		g.OrgID = "org1"
+	}
 	var out, errOut bytes.Buffer
 	app := &App{Ctx: context.Background(), G: &g, Out: &out, Err: &errOut}
 	err := run(app)
@@ -73,16 +81,16 @@ func TestPoliciesListDefaultShowsRootsOnly(t *testing.T) {
 			t.Errorf("root view should not contain %q:\n%s", unwanted, out)
 		}
 	}
-	// Acme: 5 devices in it and its sub-policies, 2 children.
+	// Acme: 5 devices in it and its sub-policies, no auto-assignment, 2 children.
 	acme := strings.Fields(lineContaining(t, out, "acme"))
-	if len(acme) != 4 || acme[2] != "5" || acme[3] != "2" {
-		t.Errorf("Acme row should be [id name devices=5 children=2], got %q", acme)
+	if len(acme) != 5 || acme[2] != "5" || acme[3] != "-" || acme[4] != "2" {
+		t.Errorf("Acme row should be [id name devices=5 auto-assign=- children=2], got %q", acme)
 	}
 	other := strings.Fields(lineContaining(t, out, "Other Root"))
-	if len(other) != 5 || other[3] != "1" || other[4] != "0" { // name has two words
-		t.Errorf("Other Root row should be [id Other Root devices=1 children=0], got %q", other)
+	if len(other) != 6 || other[3] != "1" || other[5] != "0" { // name has two words
+		t.Errorf("Other Root row should be [id Other Root devices=1 auto-assign=- children=0], got %q", other)
 	}
-	if h := strings.Fields(lineContaining(t, out, "POLICY ID")); strings.Join(h, " ") != "POLICY ID NAME DEVICES CHILDREN" {
+	if h := strings.Fields(lineContaining(t, out, "POLICY ID")); strings.Join(h, " ") != "POLICY ID NAME DEVICES AUTO-ASSIGN CHILDREN" {
 		t.Errorf("header = %q", h)
 	}
 	if !strings.Contains(out, "DEVICES counts the devices a policy applies to, in it or its sub-policies, auto-assigned ones included") {
@@ -150,7 +158,7 @@ func TestPoliciesListCountsWarnWhenTotalsDisagree(t *testing.T) {
 	ds := newDeviceServer(t)
 	ds.totalOverride = 99
 	var out, errOut bytes.Buffer
-	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k", BaseURL: ds.URL + "/api/v2"}, Out: &out, Err: &errOut}
+	app := &App{Ctx: context.Background(), G: &Globals{APIKey: "k", BaseURL: ds.URL + "/api/v2", OrgID: "org1"}, Out: &out, Err: &errOut}
 	if err := (&PoliciesListCmd{}).Run(app); err != nil {
 		t.Fatal(err)
 	}
@@ -161,22 +169,22 @@ func TestPoliciesListCountsWarnWhenTotalsDisagree(t *testing.T) {
 
 func TestPoliciesListCSV(t *testing.T) {
 	out := runPoliciesCSV(t, (&PoliciesListCmd{}).Run)
-	want := "POLICY ID,NAME,DEVICES,CHILDREN,PARENT\n" +
-		"acme,Acme,5,2,\n" +
-		"other,Other Root,1,0,\n"
+	want := "POLICY ID,NAME,DEVICES,AUTO-ASSIGN,CHILDREN,PARENT\n" +
+		"acme,Acme,5,,2,\n" +
+		"other,Other Root,1,,0,\n"
 	if out != want {
 		t.Errorf("CSV:\n%s\nwant:\n%s", out, want)
 	}
 
 	// The layout doesn't change with the scope; sub-policies name their parent.
 	out = runPoliciesCSV(t, (&PoliciesListCmd{Parent: "finance"}).Run)
-	want = "POLICY ID,NAME,DEVICES,CHILDREN,PARENT\nfin-laptops,Laptops,2,0,Finance\n"
+	want = "POLICY ID,NAME,DEVICES,AUTO-ASSIGN,CHILDREN,PARENT\nfin-laptops,Laptops,2,,0,Finance\n"
 	if out != want {
 		t.Errorf("CSV:\n%s\nwant:\n%s", out, want)
 	}
 
 	out = runPoliciesCSV(t, (&PoliciesListCmd{NoCounts: true}).Run)
-	if !strings.HasPrefix(out, "POLICY ID,NAME,CHILDREN,PARENT\n") {
+	if !strings.HasPrefix(out, "POLICY ID,NAME,AUTO-ASSIGN,CHILDREN,PARENT\n") {
 		t.Errorf("--no-counts CSV:\n%s", out)
 	}
 }
@@ -204,15 +212,15 @@ func TestPoliciesListJSONAddsDeviceCount(t *testing.T) {
 	}
 }
 
-func TestWithDeviceCountKeepsRawFieldsAndDoesNotEscapeHTML(t *testing.T) {
-	got, err := withDeviceCount(json.RawMessage(`{"name":"<R&D>","n":1.50}`), 3)
+func TestWithFieldsKeepsRawFieldsAndDoesNotEscapeHTML(t *testing.T) {
+	got, err := withFields(json.RawMessage(`{"name":"<R&D>","n":1.50}`), map[string]any{"deviceCount": 3, "autoAssign": "true"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != `{"deviceCount":3,"n":1.50,"name":"<R&D>"}` {
+	if string(got) != `{"autoAssign":"true","deviceCount":3,"n":1.50,"name":"<R&D>"}` {
 		t.Errorf("got %s", got)
 	}
-	if _, err := withDeviceCount(json.RawMessage(`[1]`), 1); err == nil {
+	if _, err := withFields(json.RawMessage(`[1]`), map[string]any{"deviceCount": 1}); err == nil {
 		t.Error("a non-object should be an error")
 	}
 }
@@ -312,8 +320,8 @@ func TestPoliciesListEmpty(t *testing.T) {
 		t.Fatal(all.err)
 	}
 	for id, want := range map[string]string{"acme": "6", "projects": "1", "projects-2024": "1", "other": "1", "sales": "1", "sales-old": "0"} {
-		if f := strings.Fields(lineContaining(t, all.out, id+" ")); f[len(f)-3] != want {
-			t.Errorf("DEVICES of %s = %s, want %s (row %q)", id, f[len(f)-3], want, f)
+		if f := strings.Fields(lineContaining(t, all.out, id+" ")); f[len(f)-4] != want {
+			t.Errorf("DEVICES of %s = %s, want %s (row %q)", id, f[len(f)-4], want, f)
 		}
 	}
 
@@ -511,4 +519,81 @@ func lineContaining(t *testing.T, s, sub string) string {
 	}
 	t.Fatalf("no line containing %q in:\n%s", sub, s)
 	return ""
+}
+
+// autoAssignRulesFixture: projects-2024 has an enabled rule (plus the
+// unassign rule that undoes it), sales-old only a disabled one, and archive
+// only an unassign rule, which assigns nothing.
+const autoAssignRulesFixture = `[
+  {"rule_id":"r1","disabled":false,"tags":[{"key":"policy_id","value":"projects-2024"},{"key":"type","value":"auto-assignment"},{"key":"action","value":"assign"}]},
+  {"rule_id":"r2","disabled":false,"tags":[{"key":"policy_id","value":"projects-2024"},{"key":"type","value":"auto-assignment"},{"key":"action","value":"unassign"},{"key":"rule_id","value":"r1"}]},
+  {"rule_id":"r3","disabled":true,"tags":[{"key":"policy_id","value":"sales-old"},{"key":"type","value":"auto-assignment"},{"key":"action","value":"assign"}]},
+  {"rule_id":"r4","disabled":false,"tags":[{"key":"policy_id","value":"archive"},{"key":"type","value":"auto-assignment"},{"key":"action","value":"unassign"}]}
+]`
+
+func TestPoliciesListAutoAssign(t *testing.T) {
+	ds := newDeviceServer(t)
+	ds.rules = autoAssignRulesFixture
+	r := runPoliciesOnServer(t, ds, emptyPoliciesFixture, Globals{Output: "csv"}, (&PoliciesListCmd{All: true}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	got := map[string]string{}
+	for _, rec := range parseCSV(t, r.out)[1:] {
+		got[rec[0]] = rec[3]
+	}
+	for id, want := range map[string]string{"projects-2024": "true", "sales-old": "disabled", "archive": "", "acme": ""} {
+		if got[id] != want {
+			t.Errorf("AUTO-ASSIGN of %s = %q, want %q", id, got[id], want)
+		}
+	}
+
+	ds = newDeviceServer(t)
+	ds.rules = autoAssignRulesFixture
+	r = runPoliciesOnServer(t, ds, emptyPoliciesFixture, Globals{JSON: true}, (&PoliciesListCmd{All: true}).Run)
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	var pols []map[string]any
+	if err := json.Unmarshal([]byte(r.out), &pols); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range pols {
+		v, has := p["autoAssign"]
+		switch p["policyId"] {
+		case "projects-2024":
+			if v != "true" {
+				t.Errorf("JSON autoAssign of projects-2024 = %v", v)
+			}
+		case "sales-old":
+			if v != "disabled" {
+				t.Errorf("JSON autoAssign of sales-old = %v", v)
+			}
+		default:
+			if has {
+				t.Errorf("%v has autoAssign %v, want none", p["policyId"], v)
+			}
+		}
+	}
+}
+
+func TestPoliciesListWithoutAutoAssignPermission(t *testing.T) {
+	ds := newDeviceServer(t)
+	ds.rulesStatus = http.StatusForbidden
+	r := runPoliciesOnServer(t, ds, "", Globals{}, (&PoliciesListCmd{}).Run)
+	if r.err != nil {
+		t.Fatalf("policies list should still work: %v", r.err)
+	}
+	if strings.Contains(r.out, "AUTO-ASSIGN") {
+		t.Errorf("the column should be left out:\n%s", r.out)
+	}
+	if !strings.Contains(r.errOut, `"Automatic Policy Assignments"`) {
+		t.Errorf("no note about the permission: %q", r.errOut)
+	}
+
+	ds = newDeviceServer(t)
+	ds.rulesStatus = http.StatusInternalServerError
+	if r := runPoliciesOnServer(t, ds, "", Globals{}, (&PoliciesListCmd{}).Run); r.err == nil {
+		t.Error("another error fetching the rules should fail the command")
+	}
 }
