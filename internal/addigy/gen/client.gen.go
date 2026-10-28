@@ -1411,6 +1411,138 @@ type SmartSoftwareUpdateSmartSoftwareRequest struct {
 // SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped Example: finished
 type SmartSoftwareUpdateSmartSoftwareRequestStatusOnSkipped string
 
+// SoftwareUpdatesServiceAutomaticActions defines model for software_updates_service.AutomaticActions.
+type SoftwareUpdatesServiceAutomaticActions struct {
+	// Download Example: Allowed
+	Download *string `json:"download,omitempty"`
+
+	// InstallOsUpdates Example: Allowed
+	InstallOsUpdates *string `json:"install_os_updates,omitempty"`
+
+	// InstallSecurityUpdate Example: Allowed
+	InstallSecurityUpdate *string `json:"install_security_update,omitempty"`
+}
+
+// SoftwareUpdatesServiceBeta defines model for software_updates_service.Beta.
+type SoftwareUpdatesServiceBeta struct {
+	OfferPrograms *[]SoftwareUpdatesServiceProgram `json:"offer_programs,omitempty"`
+
+	// ProgramEnrollment Example: Allowed
+	ProgramEnrollment *string                        `json:"program_enrollment,omitempty"`
+	RequireProgram    *SoftwareUpdatesServiceProgram `json:"require_program,omitempty"`
+}
+
+// SoftwareUpdatesServiceDeferral defines model for software_updates_service.Deferral.
+type SoftwareUpdatesServiceDeferral struct {
+	// CombinedPeriodInDays Example: 90
+	CombinedPeriodInDays *int `json:"combined_period_in_days,omitempty"`
+
+	// MajorPeriodInDays Example: 90
+	MajorPeriodInDays *int `json:"major_period_in_days,omitempty"`
+
+	// MinorPeriodInDays Example: 90
+	MinorPeriodInDays *int `json:"minor_period_in_days,omitempty"`
+
+	// SystemPeriodInDays Example: 90
+	SystemPeriodInDays *int `json:"system_period_in_days,omitempty"`
+}
+
+// SoftwareUpdatesServiceDetailsUrl defines model for software_updates_service.DetailsUrl.
+type SoftwareUpdatesServiceDetailsUrl struct {
+	// OsVersion Example: 14.0
+	OsVersion *string `json:"os_version,omitempty"`
+
+	// Url Example: https://support.apple.com/kb/HT211808
+	Url *string `json:"url,omitempty"`
+}
+
+// SoftwareUpdatesServiceProgram defines model for software_updates_service.Program.
+type SoftwareUpdatesServiceProgram struct {
+	Description *string `json:"description,omitempty"`
+	Token       *string `json:"token,omitempty"`
+}
+
+// SoftwareUpdatesServiceRapidSecurityResponse defines model for software_updates_service.RapidSecurityResponse.
+type SoftwareUpdatesServiceRapidSecurityResponse struct {
+	Enable         *bool `json:"enable,omitempty"`
+	EnableRollback *bool `json:"enable_rollback,omitempty"`
+}
+
+// SoftwareUpdatesServiceSchedule defines model for software_updates_service.Schedule.
+type SoftwareUpdatesServiceSchedule struct {
+	// CutOffTime Example: 30
+	CutOffTime *int  `json:"cut_off_time,omitempty"`
+	Enabled    *bool `json:"enabled,omitempty"`
+
+	// MaintenanceWindow Example: 2
+	MaintenanceWindow *int                                `json:"maintenance_window,omitempty"`
+	StartingTime      *SoftwareUpdatesServiceStartingTime `json:"starting_time,omitempty"`
+
+	// WeekDays Example: ["Sat","Sun"]
+	WeekDays *[]string `json:"week_days,omitempty"`
+}
+
+// SoftwareUpdatesServiceSettings defines model for software_updates_service.Settings.
+type SoftwareUpdatesServiceSettings struct {
+	AllowBetaUpdatesInDdm      *bool `json:"allow_beta_updates_in_ddm,omitempty"`
+	AllowStandardUserOsUpdates *bool `json:"allow_standard_user_os_updates,omitempty"`
+
+	// AllowedDays Example: ["[Sat"," Sun]"]
+	AllowedDays      *[]string                               `json:"allowed_days,omitempty"`
+	AutomaticActions *SoftwareUpdatesServiceAutomaticActions `json:"automatic_actions,omitempty"`
+	Beta             *SoftwareUpdatesServiceBeta             `json:"beta,omitempty"`
+
+	// DaysAfterRelease Example: 90
+	DaysAfterRelease *int                            `json:"days_after_release,omitempty"`
+	Deferrals        *SoftwareUpdatesServiceDeferral `json:"deferrals,omitempty"`
+
+	// DeniedPeriod Example: ["[2024-09-03T04:00:00Z"," 2024-09-24T04:00:00Z]"]
+	DeniedPeriod      *[]string                           `json:"denied_period,omitempty"`
+	DetailsUrl        *[]SoftwareUpdatesServiceDetailsUrl `json:"details_url,omitempty"`
+	Enabled           *bool                               `json:"enabled,omitempty"`
+	ForcePastDue      *bool                               `json:"force_past_due,omitempty"`
+	HoursAfterRelease *int                                `json:"hours_after_release,omitempty"`
+
+	// InstallAction Example: Default
+	InstallAction *string `json:"install_action,omitempty"`
+	KeepOsUpdated *bool   `json:"keep_os_updated,omitempty"`
+
+	// MaxOsVersionAllowed Example: 15.6
+	MaxOsVersionAllowed *string `json:"max_os_version_allowed,omitempty"`
+
+	// MaxUserDeferrals Example: 3
+	MaxUserDeferrals      *int                                         `json:"max_user_deferrals,omitempty"`
+	MinutesAfterRelease   *int                                         `json:"minutes_after_release,omitempty"`
+	Notifications         *bool                                        `json:"notifications,omitempty"`
+	RapidSecurityResponse *SoftwareUpdatesServiceRapidSecurityResponse `json:"rapid_security_response,omitempty"`
+
+	// RecommendedCadence Example: All
+	RecommendedCadence *string `json:"recommended_cadence,omitempty"`
+
+	// ResendUpdateCommandHour Example: 24
+	ResendUpdateCommandHour *int `json:"resend_update_command_hour,omitempty"`
+}
+
+// SoftwareUpdatesServiceStartingTime defines model for software_updates_service.StartingTime.
+type SoftwareUpdatesServiceStartingTime struct {
+	// Hour Example: 2
+	Hour   *int `json:"hour,omitempty"`
+	Minute *int `json:"minute,omitempty"`
+}
+
+// SoftwareUpdatesServiceSystemUpdatesSettings defines model for software_updates_service.SystemUpdatesSettings.
+type SoftwareUpdatesServiceSystemUpdatesSettings struct {
+	IosSettings    *SoftwareUpdatesServiceSettings `json:"ios_settings,omitempty"`
+	IpadosSettings *SoftwareUpdatesServiceSettings `json:"ipados_settings,omitempty"`
+
+	// LastUpdated Example: 2024-03-15T18:40:00.921Z
+	LastUpdated   *string                         `json:"last_updated,omitempty"`
+	MacosSettings *SoftwareUpdatesServiceSettings `json:"macos_settings,omitempty"`
+	PolicyId      *string                         `json:"policy_id,omitempty"`
+	Schedule      *SoftwareUpdatesServiceSchedule `json:"schedule,omitempty"`
+	TvosSettings  *SoftwareUpdatesServiceSettings `json:"tvos_settings,omitempty"`
+}
+
 // StaticFieldsEntitiesStaticField defines model for static_fields_entities.StaticField.
 type StaticFieldsEntitiesStaticField struct {
 	Id             *string `json:"id,omitempty"`
@@ -1603,6 +1735,12 @@ type GetStaticFieldValuesParams struct {
 
 	// PerPage Number of items in the response.
 	PerPage *int `form:"per_page,omitempty" json:"per_page,omitempty"`
+}
+
+// GetSystemUpdateSettingsParams defines parameters for GetSystemUpdateSettings.
+type GetSystemUpdateSettingsParams struct {
+	// PolicyId Policy Id
+	PolicyId string `form:"policy_id" json:"policy_id"`
 }
 
 // GetDevicesJSONRequestBody defines body for GetDevices for application/json ContentType.
@@ -1944,6 +2082,14 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
 	GetStaticFieldValues(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSystemUpdateSettings Gets system updates settings for a policy.
+	//
+	// Gets system updates settings for a policy.
+	// <b>Permission Required: </b>View System Updates Settings.
+	//
+	// Corresponds with GET /system-updates/settings (the `GetSystemUpdateSettings` operationId).
+	GetSystemUpdateSettings(ctx context.Context, params *GetSystemUpdateSettingsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // GetDevicesWithBody Universal Search Devices
@@ -2462,6 +2608,24 @@ func (c *Client) GetStaticFields(ctx context.Context, params *GetStaticFieldsPar
 // Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
 func (c *Client) GetStaticFieldValues(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetStaticFieldValuesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSystemUpdateSettings Gets system updates settings for a policy.
+//
+// Gets system updates settings for a policy.
+// <b>Permission Required: </b>View System Updates Settings.
+//
+// Corresponds with GET /system-updates/settings (the `GetSystemUpdateSettings` operationId).
+func (c *Client) GetSystemUpdateSettings(ctx context.Context, params *GetSystemUpdateSettingsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSystemUpdateSettingsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3283,6 +3447,56 @@ func NewGetStaticFieldValuesRequest(server string, params *GetStaticFieldValuesP
 	return req, nil
 }
 
+// NewGetSystemUpdateSettingsRequest constructs an http.Request for the GetSystemUpdateSettings method
+func NewGetSystemUpdateSettingsRequest(server string, params *GetSystemUpdateSettingsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/system-updates/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "policy_id", params.PolicyId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -3580,6 +3794,16 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /static-fields/value (the `GetStaticFieldValues` operationId).
 	GetStaticFieldValuesWithResponse(ctx context.Context, params *GetStaticFieldValuesParams, reqEditors ...RequestEditorFn) (*GetStaticFieldValuesResponse, error)
+
+	// GetSystemUpdateSettingsWithResponse Gets system updates settings for a policy.
+	//
+	// Gets system updates settings for a policy.
+	// <b>Permission Required: </b>View System Updates Settings.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /system-updates/settings (the `GetSystemUpdateSettings` operationId).
+	GetSystemUpdateSettingsWithResponse(ctx context.Context, params *GetSystemUpdateSettingsParams, reqEditors ...RequestEditorFn) (*GetSystemUpdateSettingsResponse, error)
 }
 
 type GetDevicesResponse struct {
@@ -4592,6 +4816,61 @@ func (r GetStaticFieldValuesResponse) ContentType() string {
 	return ""
 }
 
+type GetSystemUpdateSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SoftwareUpdatesServiceSystemUpdatesSettings
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSystemUpdateSettingsResponse) GetJSON200() *SoftwareUpdatesServiceSystemUpdatesSettings {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSystemUpdateSettingsResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSystemUpdateSettingsResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSystemUpdateSettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSystemUpdateSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSystemUpdateSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSystemUpdateSettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetDevicesWithBodyWithResponse Universal Search Devices
 //
 // Queries devices in your organization by a device-fact value. <br><b>Permission Required: </b>View Devices.
@@ -5018,6 +5297,22 @@ func (c *ClientWithResponses) GetStaticFieldValuesWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseGetStaticFieldValuesResponse(rsp)
+}
+
+// GetSystemUpdateSettingsWithResponse Gets system updates settings for a policy.
+//
+// Gets system updates settings for a policy.
+// <b>Permission Required: </b>View System Updates Settings.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /system-updates/settings (the `GetSystemUpdateSettings` operationId).
+func (c *ClientWithResponses) GetSystemUpdateSettingsWithResponse(ctx context.Context, params *GetSystemUpdateSettingsParams, reqEditors ...RequestEditorFn) (*GetSystemUpdateSettingsResponse, error) {
+	rsp, err := c.GetSystemUpdateSettings(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSystemUpdateSettingsResponse(rsp)
 }
 
 // ParseGetDevicesResponse parses an HTTP response from a GetDevicesWithResponse call
@@ -5745,6 +6040,46 @@ func ParseGetStaticFieldValuesResponse(rsp *http.Response) (*GetStaticFieldValue
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSystemUpdateSettingsResponse parses an HTTP response from a GetSystemUpdateSettingsWithResponse call
+func ParseGetSystemUpdateSettingsResponse(rsp *http.Response) (*GetSystemUpdateSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSystemUpdateSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SoftwareUpdatesServiceSystemUpdatesSettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 

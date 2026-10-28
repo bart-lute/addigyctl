@@ -16,9 +16,10 @@ import (
 )
 
 type PoliciesCmd struct {
-	List PoliciesListCmd `cmd:"" help:"List policies (root policies by default)."`
-	Tree PoliciesTreeCmd `cmd:"" help:"Show the policy hierarchy as a tree."`
-	Get  PoliciesGetCmd  `cmd:"" help:"Show one policy in full (JSON)."`
+	List    PoliciesListCmd    `cmd:"" help:"List policies (root policies by default)."`
+	Tree    PoliciesTreeCmd    `cmd:"" help:"Show the policy hierarchy as a tree."`
+	Get     PoliciesGetCmd     `cmd:"" help:"Show one policy in full (JSON)."`
+	Updates PoliciesUpdatesCmd `cmd:"" help:"Show the policies' own OS update settings (macOS, iOS, iPadOS, tvOS)."`
 }
 
 // ---- policies list ---------------------------------------------------------

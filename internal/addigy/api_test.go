@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -535,5 +536,37 @@ func TestAutoAssignRulesWithoutPermission(t *testing.T) {
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusForbidden {
 		t.Errorf("err = %v, want a 403 APIError", err)
+	}
+}
+
+func TestSystemUpdateSettings(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/system-updates/settings" || r.URL.Query().Get("policy_id") == "" {
+			t.Errorf("unexpected request %s", r.URL)
+		}
+		id := r.URL.Query().Get("policy_id")
+		if id == "p2" {
+			fmt.Fprintf(w, `{"policy_id":"p2","macos_settings":{"enabled":false},"last_updated":null}`)
+			return
+		}
+		fmt.Fprintf(w, `{"policy_id":%q,"macos_settings":{"enabled":true,"max_os_version_allowed":"27.9.99"},
+		  "ios_settings":{"enabled":false},"schedule":{"enabled":false},"last_updated":"2026-10-01T10:00:00Z"}`, id)
+	})
+	all, err := api.AllSystemUpdateSettings(context.Background(), []string{"p1", "p2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p1, p2 := all[0], all[1]
+	if p1.PolicyID != "p1" || p1.LastUpdated != "2026-10-01T10:00:00Z" || p1.OS["macos"]["max_os_version_allowed"] != "27.9.99" {
+		t.Errorf("p1 = %+v", p1)
+	}
+	if _, ok := p1.OS["ipados"]; ok {
+		t.Error("an OS Addigy returns nothing for should be missing")
+	}
+	if p2.PolicyID != "p2" || p2.LastUpdated != "" || p2.OS["macos"]["enabled"] != false {
+		t.Errorf("p2 = %+v", p2)
+	}
+	if !strings.Contains(string(p1.Raw), `"schedule"`) {
+		t.Errorf("Raw should be the full response: %s", p1.Raw)
 	}
 }

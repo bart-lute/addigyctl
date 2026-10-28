@@ -1084,3 +1084,72 @@ func (a *API) FileUsages(ctx context.Context, ids []string) ([]FileUsage, error)
 	}
 	return nonNil(u), nil
 }
+
+// ---- System update settings ------------------------------------------------
+
+// UpdateOSes are the operating systems a policy has update settings for, in
+// the order Addigy's web app shows them. Each is the prefix of a
+// "<os>_settings" object.
+var UpdateOSes = []string{"macos", "ios", "ipados", "tvos"}
+
+// UpdateSettings is one policy's own system update settings
+// (GET /system-updates/settings).
+type UpdateSettings struct {
+	PolicyID    string
+	LastUpdated string
+	// OS maps each of UpdateOSes to its settings as Addigy returns them
+	// (always at least "enabled"); an OS Addigy returns nothing for is
+	// missing.
+	OS  map[string]map[string]any
+	Raw json.RawMessage
+}
+
+// SystemUpdateSettings returns a policy's own system update settings. It
+// needs the API key permission "View System Updates Settings".
+func (a *API) SystemUpdateSettings(ctx context.Context, policyID string) (UpdateSettings, error) {
+	resp, err := a.c.GetSystemUpdateSettingsWithResponse(ctx, &gen.GetSystemUpdateSettingsParams{PolicyId: policyID})
+	if err != nil {
+		return UpdateSettings{}, err
+	}
+	if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+		return UpdateSettings{}, err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return UpdateSettings{}, fmt.Errorf("decoding system update settings: %w", err)
+	}
+	s := UpdateSettings{PolicyID: policyID, OS: map[string]map[string]any{}, Raw: resp.Body}
+	_ = json.Unmarshal(raw["last_updated"], &s.LastUpdated) // null when never saved
+	for _, os := range UpdateOSes {
+		var fields map[string]any
+		if err := json.Unmarshal(raw[os+"_settings"], &fields); err == nil && fields != nil {
+			s.OS[os] = fields
+		}
+	}
+	return s, nil
+}
+
+// AllSystemUpdateSettings returns the system update settings of every given
+// policy, in the same order, fetching a few at a time.
+func (a *API) AllSystemUpdateSettings(ctx context.Context, policyIDs []string) ([]UpdateSettings, error) {
+	out := make([]UpdateSettings, len(policyIDs))
+	errs := make([]error, len(policyIDs))
+	sem := make(chan struct{}, fanOutWorkers)
+	var wg sync.WaitGroup
+	for i, id := range policyIDs {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, id string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			out[i], errs[i] = a.SystemUpdateSettings(ctx, id)
+		}(i, id)
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}

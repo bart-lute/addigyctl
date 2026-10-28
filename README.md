@@ -79,7 +79,7 @@ addigyctl config show     # effective configuration, API key redacted
 
 ```
 addigyctl devices  list | get | policies | export
-addigyctl policies list | tree | get
+addigyctl policies list | tree | get | updates
 addigyctl facts    list
 addigyctl ade      tokens
 addigyctl alerts   list
@@ -108,6 +108,8 @@ addigyctl policies list --sort devices       # busiest policies first
 addigyctl policies tree                      # the whole hierarchy
 addigyctl policies tree Acme --depth 1 --ids # one branch, with IDs
 addigyctl policies get "Acme / Finance"      # one policy in full (JSON)
+addigyctl policies updates                   # OS update settings of every policy
+addigyctl policies updates --policy Acme --os macos  # one branch, macOS only
 ```
 
 Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a name is ambiguous, the error lists the candidates with their IDs and paths.
@@ -115,6 +117,8 @@ Policies can be referenced by ID, by name, or by a `Parent / Child` path. If a n
 The `DEVICES` column (and the `[n]` in the tree) counts the devices a policy applies to, the way Addigy's web app counts them: devices located in it or in any of its sub-policies, and devices auto-assigned to it or to one of its sub-policies, each device once. It is taken from every device's `policy_ids` fact, which lists exactly those policies. `devices list --policy` lists only the devices *located* in a policy, so for a policy that is only auto-assigned it can show fewer devices than `DEVICES`. `--empty` keeps the policies where the count is 0: no device located in them or below them, and none auto-assigned, such as the policy of a client that left. A parent whose devices all sit in its sub-policies is not empty. It searches every level, like `--name`; with `--parent` only the direct sub-policies, and with `--all --parent` every level below that policy, which leaves out branches that are empty on purpose elsewhere in the tree. Counting needs one bulk fetch of all devices; use `--no-counts` to skip it.
 
 The `AUTO-ASSIGN` column shows whether a policy has an automatic assignment rule, as the web app's Auto-Assign column does: `true` for an enabled rule, `disabled` when its rules are all disabled, and empty otherwise (`-` in a table; the JSON field `autoAssign` is then left out). Rules that only unassign don't count. Reading the rules needs the API key permission "Automatic Policy Assignments"; without it the column is left out and a note says so. `--sort` accepts `name` (default), `id`, `devices`, `children` or `parent`; `--sort devices` needs the counts, so it cannot be combined with `--no-counts`. `devices` and `children` default to most first (a count, where more is usually more interesting); the rest default to A-Z. `--desc` reverses whichever default the chosen column has, so it always means "the other order" regardless of `--sort`.
+
+`policies updates` shows the OS update settings of each policy (Updates → Update by OS in Addigy's web app): one row per policy and operating system (macOS, iOS, iPadOS, tvOS) that has updates enabled, in tree order. The table shows the main settings, exactly as Addigy reports them: `MODE`, `MAX VERSION` (the highest OS version devices may update to; `-` in `latest` mode, where the web app hides it and it doesn't apply), `DAYS AFTER RELEASE` and `DEFERRALS` (the deferral periods in days that are not 0; `-` when deferrals are not set). `-o csv` adds every other setting, such as `KEEP UPDATED` (which the web app sets together with the mode: `true` for `latest`) and `USER DEFERRALS` (Apple's maximum number of times a user may postpone an update, which according to Apple only applies to the "InstallLater" install action), plus the policy's path and when the settings were last saved, and `-j` prints Addigy's full response per policy, schedule included. `--policy` limits it to one policy and its sub-policies (`--direct`: only that policy), `--os` to some operating systems, and `--disabled` also shows the settings stored for an operating system whose updates are switched off, with an `ENABLED` column. These are each policy's own settings: what a policy may get from a parent is not shown. It fetches the settings one request per policy, a few at a time. The API key needs the permission "View System Updates Settings".
 
 ### Devices
 

@@ -55,6 +55,8 @@ type deviceServer struct {
 	rules         string            // automatic assignment rules (JSON); default none
 	rulesStatus   int               // when set, the rules endpoint answers this status instead
 	extraFacts    map[string]string // agent ID → more facts, as raw JSON members
+	updates       map[string]string // policy ID → system update settings (JSON); default all disabled
+	updatesStatus int               // when set, the update settings endpoint answers this status instead
 }
 
 func newDeviceServer(t *testing.T) *deviceServer {
@@ -79,6 +81,18 @@ func newDeviceServer(t *testing.T) *deviceServer {
 				return
 			}
 			io.WriteString(w, ds.rules)
+		case "/api/v2/system-updates/settings":
+			if ds.updatesStatus != 0 {
+				w.WriteHeader(ds.updatesStatus)
+				io.WriteString(w, `{"message":"Do not have permission to perform this action."}`)
+				return
+			}
+			id := r.URL.Query().Get("policy_id")
+			if body, ok := ds.updates[id]; ok {
+				io.WriteString(w, body)
+				return
+			}
+			fmt.Fprintf(w, `{"policy_id":%q,"macos_settings":{"enabled":false},"ios_settings":{"enabled":false},"ipados_settings":{"enabled":false},"tvos_settings":{"enabled":false},"schedule":{"enabled":false},"last_updated":null}`, id)
 		case "/api/v2/devices":
 			var body struct {
 				Page                   int      `json:"page"`
