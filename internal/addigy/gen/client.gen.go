@@ -55,6 +55,42 @@ func (e AlertEntitiesPaginatedReceivedAlertsRequestQuerySortDirection) Valid() b
 	}
 }
 
+// Defines values for InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection.
+const (
+	InstalledAppsQueryAgentInstalledApplicationsRequestSortDirectionAsc  InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection = "asc"
+	InstalledAppsQueryAgentInstalledApplicationsRequestSortDirectionDesc InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection enum.
+func (e InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection) Valid() bool {
+	switch e {
+	case InstalledAppsQueryAgentInstalledApplicationsRequestSortDirectionAsc:
+		return true
+	case InstalledAppsQueryAgentInstalledApplicationsRequestSortDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstalledAppsQueryAgentInstalledApplicationsRequestSortField.
+const (
+	AgentId InstalledAppsQueryAgentInstalledApplicationsRequestSortField = "agent_id"
+	Name    InstalledAppsQueryAgentInstalledApplicationsRequestSortField = "name"
+)
+
+// Valid indicates whether the value is a known member of the InstalledAppsQueryAgentInstalledApplicationsRequestSortField enum.
+func (e InstalledAppsQueryAgentInstalledApplicationsRequestSortField) Valid() bool {
+	switch e {
+	case AgentId:
+		return true
+	case Name:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstructionsServiceAppExistsConditionOperator.
 const (
 	InstructionsServiceAppExistsConditionOperatorEq  InstructionsServiceAppExistsConditionOperator = "eq"
@@ -668,6 +704,48 @@ type HomescreenLayoutsEntitiesIconItem struct {
 	Url         *string                                `json:"url,omitempty"`
 }
 
+// InstalledApplicationsServiceInstalledApplication defines model for installed_applications_service.InstalledApplication.
+type InstalledApplicationsServiceInstalledApplication struct {
+	Agentid                 *string `json:"agentid,omitempty"`
+	MicrosoftBuildIncrement *string `json:"microsoft_build_increment,omitempty"`
+	MicrosoftBuildNumber    *string `json:"microsoft_build_number,omitempty"`
+	Name                    *string `json:"name,omitempty"`
+	Orgid                   *string `json:"orgid,omitempty"`
+	Path                    *string `json:"path,omitempty"`
+	Version                 *string `json:"version,omitempty"`
+}
+
+// InstalledAppsAgentInstalledApplicationsFilter defines model for installed_apps.AgentInstalledApplicationsFilter.
+type InstalledAppsAgentInstalledApplicationsFilter struct {
+	// AgentIds Example: ["agent1","agent2"]
+	AgentIds []string `json:"agent_ids"`
+
+	// Names Example: ["Google Chrome","Firefox"]
+	Names *[]string `json:"names,omitempty"`
+}
+
+// InstalledAppsQueryAgentInstalledApplicationsRequest defines model for installed_apps.QueryAgentInstalledApplicationsRequest.
+type InstalledAppsQueryAgentInstalledApplicationsRequest struct {
+	// Page Example: 1
+	Page *int `json:"page,omitempty"`
+
+	// PerPage Example: 10
+	PerPage *int                                           `json:"per_page,omitempty"`
+	Query   *InstalledAppsAgentInstalledApplicationsFilter `json:"query,omitempty"`
+
+	// SortDirection Example: asc
+	SortDirection InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection `json:"sort_direction"`
+
+	// SortField Example: name
+	SortField InstalledAppsQueryAgentInstalledApplicationsRequestSortField `json:"sort_field"`
+}
+
+// InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection Example: asc
+type InstalledAppsQueryAgentInstalledApplicationsRequestSortDirection string
+
+// InstalledAppsQueryAgentInstalledApplicationsRequestSortField Example: name
+type InstalledAppsQueryAgentInstalledApplicationsRequestSortField string
+
 // InstructionsServiceAppExistsCondition defines model for instructions_service.AppExistsCondition.
 type InstructionsServiceAppExistsCondition struct {
 	// Enabled Example: true
@@ -1201,6 +1279,12 @@ type ResponseEntitiesMetadata struct {
 type ResponseEntitiesPaginatedResponseFileManagerServiceOrganizationFile struct {
 	Items    *[]FileManagerServiceOrganizationFile `json:"items,omitempty"`
 	Metadata *ResponseEntitiesMetadata             `json:"metadata,omitempty"`
+}
+
+// ResponseEntitiesPaginatedResponseInstalledApplicationsServiceInstalledApplication defines model for response_entities.PaginatedResponse-installed_applications_service_InstalledApplication.
+type ResponseEntitiesPaginatedResponseInstalledApplicationsServiceInstalledApplication struct {
+	Items    *[]InstalledApplicationsServiceInstalledApplication `json:"items,omitempty"`
+	Metadata *ResponseEntitiesMetadata                           `json:"metadata,omitempty"`
 }
 
 // ResponseEntitiesPaginatedResponseInstructionsServiceCustomSoftware defines model for response_entities.PaginatedResponse-instructions_service_CustomSoftware.
@@ -1764,6 +1848,9 @@ type GetAdeTokensJSONRequestBody = AdeAutomaticEnrollmentRequest
 // GetOrganizationFilesJSONRequestBody defines body for GetOrganizationFiles for application/json ContentType.
 type GetOrganizationFilesJSONRequestBody = FilesOrganizationFilesRequest
 
+// GetInstalledApplicationsJSONRequestBody defines body for GetInstalledApplications for application/json ContentType.
+type GetInstalledApplicationsJSONRequestBody = InstalledAppsQueryAgentInstalledApplicationsRequest
+
 // GetReceivedAlertsByFilterJSONRequestBody defines body for GetReceivedAlertsByFilter for application/json ContentType.
 type GetReceivedAlertsByFilterJSONRequestBody = AlertEntitiesPaginatedReceivedAlertsRequestQuery
 
@@ -2014,6 +2101,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
 	GetOrganizationFile(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetInstalledApplicationsWithBody Query installed applications from a device (Via Agent)
+	//
+	// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+	GetInstalledApplicationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetInstalledApplications Query installed applications from a device (Via Agent)
+	//
+	// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+	GetInstalledApplications(ctx context.Context, body GetInstalledApplicationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetReceivedAlertsByFilterWithBody Get received alerts matching a filter.
 	//
@@ -2460,6 +2565,44 @@ func (c *Client) GetOrganizationFiles(ctx context.Context, body GetOrganizationF
 // Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
 func (c *Client) GetOrganizationFile(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetOrganizationFileRequest(c.Server, fileId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetInstalledApplicationsWithBody Query installed applications from a device (Via Agent)
+//
+// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+func (c *Client) GetInstalledApplicationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInstalledApplicationsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetInstalledApplications Query installed applications from a device (Via Agent)
+//
+// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+func (c *Client) GetInstalledApplications(ctx context.Context, body GetInstalledApplicationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInstalledApplicationsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3203,6 +3346,46 @@ func NewGetOrganizationFileRequest(server string, fileId string) (*http.Request,
 	return req, nil
 }
 
+// NewGetInstalledApplicationsRequest calls the generic GetInstalledApplications builder with application/json body
+func NewGetInstalledApplicationsRequest(server string, body GetInstalledApplicationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGetInstalledApplicationsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGetInstalledApplicationsRequestWithBody constructs an http.Request for the GetInstalledApplications method, with any body, and a specified content type
+func NewGetInstalledApplicationsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/oa/installed-apps/agent/query")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetReceivedAlertsByFilterRequest calls the generic GetReceivedAlertsByFilter builder with application/json body
 func NewGetReceivedAlertsByFilterRequest(server string, body GetReceivedAlertsByFilterJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -3722,6 +3905,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /oa/files/{file_id} (the `GetOrganizationFile` operationId).
 	GetOrganizationFileWithResponse(ctx context.Context, fileId string, reqEditors ...RequestEditorFn) (*GetOrganizationFileResponse, error)
+
+	// GetInstalledApplicationsWithBodyWithResponse Query installed applications from a device (Via Agent)
+	//
+	// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+	GetInstalledApplicationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetInstalledApplicationsResponse, error)
+
+	// GetInstalledApplicationsWithResponse Query installed applications from a device (Via Agent)
+	//
+	// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+	GetInstalledApplicationsWithResponse(ctx context.Context, body GetInstalledApplicationsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetInstalledApplicationsResponse, error)
 
 	// GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
 	//
@@ -4562,6 +4763,75 @@ func (r GetOrganizationFileResponse) ContentType() string {
 	return ""
 }
 
+type GetInstalledApplicationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ResponseEntitiesPaginatedResponseInstalledApplicationsServiceInstalledApplication
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ResponseEntitiesErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ResponseEntitiesErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ResponseEntitiesErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ResponseEntitiesErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetInstalledApplicationsResponse) GetJSON200() *ResponseEntitiesPaginatedResponseInstalledApplicationsServiceInstalledApplication {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetInstalledApplicationsResponse) GetJSON400() *ResponseEntitiesErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetInstalledApplicationsResponse) GetJSON401() *ResponseEntitiesErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetInstalledApplicationsResponse) GetJSON404() *ResponseEntitiesErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetInstalledApplicationsResponse) GetJSON500() *ResponseEntitiesErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetInstalledApplicationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInstalledApplicationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInstalledApplicationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetInstalledApplicationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetReceivedAlertsByFilterResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5177,6 +5447,36 @@ func (c *ClientWithResponses) GetOrganizationFileWithResponse(ctx context.Contex
 		return nil, err
 	}
 	return ParseGetOrganizationFileResponse(rsp)
+}
+
+// GetInstalledApplicationsWithBodyWithResponse Query installed applications from a device (Via Agent)
+//
+// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+func (c *ClientWithResponses) GetInstalledApplicationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetInstalledApplicationsResponse, error) {
+	rsp, err := c.GetInstalledApplicationsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInstalledApplicationsResponse(rsp)
+}
+
+// GetInstalledApplicationsWithResponse Query installed applications from a device (Via Agent)
+//
+// Query installed applications from a device providing some agent IDs. <b>Only available for macOS</b> <br><b>Permission Required:</b> View Devices.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /oa/installed-apps/agent/query (the `GetInstalledApplications` operationId).
+func (c *ClientWithResponses) GetInstalledApplicationsWithResponse(ctx context.Context, body GetInstalledApplicationsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetInstalledApplicationsResponse, error) {
+	rsp, err := c.GetInstalledApplications(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInstalledApplicationsResponse(rsp)
 }
 
 // GetReceivedAlertsByFilterWithBodyWithResponse Get received alerts matching a filter.
@@ -5847,6 +6147,60 @@ func ParseGetOrganizationFileResponse(rsp *http.Response) (*GetOrganizationFileR
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetInstalledApplicationsResponse parses an HTTP response from a GetInstalledApplicationsWithResponse call
+func ParseGetInstalledApplicationsResponse(rsp *http.Response) (*GetInstalledApplicationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInstalledApplicationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResponseEntitiesPaginatedResponseInstalledApplicationsServiceInstalledApplication
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ResponseEntitiesErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ResponseEntitiesErrorResponse

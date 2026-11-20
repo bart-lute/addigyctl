@@ -1153,3 +1153,94 @@ func (a *API) AllSystemUpdateSettings(ctx context.Context, policyIDs []string) (
 	}
 	return out, nil
 }
+
+// ---- Installed applications ------------------------------------------------
+
+// InstalledApp is an application the Addigy agent found on a Mac.
+type InstalledApp struct {
+	AgentID string `json:"agentid"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Path    string `json:"path"`
+}
+
+// installedAppsPerPage is the largest page the endpoint allows.
+const installedAppsPerPage = 100
+
+// InstalledApps returns the applications the agent reported for one device
+// (POST /oa/installed-apps/agent/query; Macs only), and the total Addigy
+// reported, so callers can detect an incomplete result. An application listed
+// twice across pages is returned once.
+func (a *API) InstalledApps(ctx context.Context, agentID string) ([]InstalledApp, int, error) {
+	perPage := installedAppsPerPage
+	var (
+		apps  []InstalledApp
+		total int
+		seen  = map[InstalledApp]bool{}
+	)
+	for page := 1; ; page++ {
+		p := page
+		resp, err := a.c.GetInstalledApplicationsWithResponse(ctx, gen.GetInstalledApplicationsJSONRequestBody{
+			Page:          &p,
+			PerPage:       &perPage,
+			Query:         &gen.InstalledAppsAgentInstalledApplicationsFilter{AgentIds: []string{agentID}},
+			SortField:     gen.Name,
+			SortDirection: gen.InstalledAppsQueryAgentInstalledApplicationsRequestSortDirectionAsc,
+		})
+		if err != nil {
+			return nil, 0, err
+		}
+		if err := checkStatus(resp.StatusCode(), resp.Body); err != nil {
+			return nil, 0, err
+		}
+		var raw struct {
+			Items    []InstalledApp `json:"items"`
+			Metadata PageMetadata   `json:"metadata"`
+		}
+		if err := json.Unmarshal(resp.Body, &raw); err != nil {
+			return nil, 0, fmt.Errorf("decoding installed applications: %w", err)
+		}
+		total = raw.Metadata.Total
+		for _, app := range raw.Items {
+			if !seen[app] {
+				seen[app] = true
+				apps = append(apps, app)
+			}
+		}
+		if len(raw.Items) == 0 || page >= raw.Metadata.PageCount {
+			return apps, total, nil
+		}
+	}
+}
+
+// AllInstalledApps returns the applications of every given device, fetching
+// a few devices at a time, and the sum of the totals Addigy reported.
+func (a *API) AllInstalledApps(ctx context.Context, agentIDs []string) ([]InstalledApp, int, error) {
+	apps := make([][]InstalledApp, len(agentIDs))
+	totals := make([]int, len(agentIDs))
+	errs := make([]error, len(agentIDs))
+	sem := make(chan struct{}, fanOutWorkers)
+	var wg sync.WaitGroup
+	for i, id := range agentIDs {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, id string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			apps[i], totals[i], errs[i] = a.InstalledApps(ctx, id)
+		}(i, id)
+	}
+	wg.Wait()
+	var (
+		all   []InstalledApp
+		total int
+	)
+	for i := range agentIDs {
+		if errs[i] != nil {
+			return nil, 0, errs[i]
+		}
+		all = append(all, apps[i]...)
+		total += totals[i]
+	}
+	return all, total, nil
+}

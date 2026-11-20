@@ -57,6 +57,7 @@ type deviceServer struct {
 	extraFacts    map[string]string // agent ID → more facts, as raw JSON members
 	updates       map[string]string // policy ID → system update settings (JSON); default all disabled
 	updatesStatus int               // when set, the update settings endpoint answers this status instead
+	apps          map[string]string // agent ID → installed applications (JSON array); default none
 }
 
 func newDeviceServer(t *testing.T) *deviceServer {
@@ -81,6 +82,22 @@ func newDeviceServer(t *testing.T) *deviceServer {
 				return
 			}
 			io.WriteString(w, ds.rules)
+		case "/api/v2/oa/installed-apps/agent/query":
+			var body struct {
+				Query struct {
+					AgentIDs []string `json:"agent_ids"`
+				} `json:"query"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Query.AgentIDs) != 1 {
+				t.Errorf("want one agent ID per request: %v %v", body.Query.AgentIDs, err)
+			}
+			items := `[]`
+			if len(body.Query.AgentIDs) == 1 && ds.apps[body.Query.AgentIDs[0]] != "" {
+				items = ds.apps[body.Query.AgentIDs[0]]
+			}
+			var list []json.RawMessage
+			json.Unmarshal([]byte(items), &list)
+			fmt.Fprintf(w, `{"items":%s,"metadata":{"page":1,"page_count":1,"per_page":100,"result_count":%d,"total":%d}}`, items, len(list), len(list))
 		case "/api/v2/system-updates/settings":
 			if ds.updatesStatus != 0 {
 				w.WriteHeader(ds.updatesStatus)

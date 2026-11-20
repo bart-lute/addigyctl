@@ -570,3 +570,32 @@ func TestSystemUpdateSettings(t *testing.T) {
 		t.Errorf("Raw should be the full response: %s", p1.Raw)
 	}
 }
+
+func TestInstalledAppsPagesAndDuplicates(t *testing.T) {
+	api := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Page    int `json:"page"`
+			PerPage int `json:"per_page"`
+			Query   struct {
+				AgentIDs []string `json:"agent_ids"`
+			} `json:"query"`
+		}
+		json.NewDecoder(r.Body).Decode(&body)
+		if r.URL.Path != "/api/v2/oa/installed-apps/agent/query" || len(body.Query.AgentIDs) != 1 || body.Query.AgentIDs[0] != "a1" || body.PerPage != 100 {
+			t.Errorf("unexpected request %s %+v", r.URL.Path, body)
+		}
+		// Page 2 repeats the last app of page 1, as an unstable sort can.
+		items := map[int]string{
+			1: `[{"agentid":"a1","name":"A","version":"1","path":"/Applications/A.app"},{"agentid":"a1","name":"B","version":"2","path":"/Applications/B.app"}]`,
+			2: `[{"agentid":"a1","name":"B","version":"2","path":"/Applications/B.app"},{"agentid":"a1","name":"C","version":"3","path":"/Applications/C.app"}]`,
+		}[body.Page]
+		fmt.Fprintf(w, `{"items":%s,"metadata":{"page":%d,"page_count":2,"per_page":100,"total":4}}`, items, body.Page)
+	})
+	apps, total, err := api.InstalledApps(context.Background(), "a1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(apps) != 3 || total != 4 || apps[2].Name != "C" || apps[2].Version != "3" {
+		t.Errorf("apps = %+v, total = %d", apps, total)
+	}
+}

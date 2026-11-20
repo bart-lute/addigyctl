@@ -132,11 +132,14 @@ addigyctl devices list --policy "Acme / Finance"           # located in it or an
 addigyctl devices list --policy "Acme / Finance" --direct  # located in exactly that policy
 addigyctl devices list --no-policy                         # devices without any policy
 addigyctl devices list --mdm-issues                        # no MDM, or MDM profile not approved
+addigyctl devices apps --policy "Acme / Finance"           # installed applications, one row per app
 addigyctl devices get C02XXXXXXXXX             # agent ID, serial number or device name
 addigyctl devices policies <agent-id>          # policies assigned to a device
 ```
 
 A device has exactly one *location*: its `policy_id` fact. The separate `policy_ids` fact lists every policy that applies to it, which is a different question. `--policy` filters on the location, and adds a `LOCATION` column when sub-policies are included. Addigy cannot filter on a policy subtree itself, so with `--policy` the devices are fetched (a few pages in parallel), filtered, sorted and paginated locally. `--no-policy` lists the devices that have neither: no location and no policy applying to them. It fetches every device the same way. `--mdm-issues` lists the devices that report `false` for `has_mdm` or `has_mdm_profile_approved`, and adds both as columns. A fact a device doesn't report doesn't count: iPhones and iPads don't report `has_mdm_profile_approved`, so they are only listed when `has_mdm` is false. These flags can be combined with each other and with `--policy`, except `--no-policy` with `--policy`.
+
+`devices apps` is an inventory of installed applications: one row per application name, with the number of devices it is on and every version found, newest first, each with its number of devices (a device with two versions side by side counts for both). The data comes from the Addigy agent, so it covers Macs only; the footer says how many of the devices reported applications. Apple's built-in apps, which the agent finds under `/System`, are left out unless you add `--system`; Apple apps installed in `/Applications`, such as Safari or Keynote, are always listed. `--policy` and `--direct` work as for `devices list`; without `--policy` it covers every device. `--sort devices` puts the most common applications first. `-o csv` gives the same columns without shortening them, and `-j` adds the paths where each application was found. It needs one request per device, a few at a time.
 
 #### Exporting to Excel
 

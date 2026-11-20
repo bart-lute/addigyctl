@@ -22,6 +22,7 @@ type DevicesCmd struct {
 	Get      DevicesGetCmd      `cmd:"" help:"Show one device with all of its facts."`
 	Policies DevicesPoliciesCmd `cmd:"" help:"Show the policies assigned to a device."`
 	Export   DevicesExportCmd   `cmd:"" help:"Export devices with all their facts and static fields to an Excel file."`
+	Apps     DevicesAppsCmd     `cmd:"" help:"Inventory of installed applications across devices (Macs, via the Addigy agent)."`
 }
 
 // ---- devices list ----------------------------------------------------------

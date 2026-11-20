@@ -34,3 +34,4 @@ output-options:
     - GetStaticFieldValues
     - GetPolicyAssignmentRules
     - GetSystemUpdateSettings
+    - GetInstalledApplications
